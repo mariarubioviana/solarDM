@@ -2,14 +2,14 @@
 #include <stdlib.h>
 #include <math.h>
 
-float f_Kepler(float a, float b){  //Ecuacion diferencial de la aceleración 2.2
+float f_Kepler(float a, float b){  //Ecuacion de la aceleración 2.2
     float f, den;
     den = pow((a*a+b*b), 1.5);
     f = -a/den;
     return f;
 }
 
-float Energia(float x, float y, float vx, float vy){
+float Energia(float x, float y, float vx, float vy){ //Ecuacion de la energia 2.3
     float E;
     E = 0.5*(vx*vx+vy*vy) - 1/(sqrt(x*x+y*y));
     return E;
@@ -57,7 +57,7 @@ void Verlet(int steps, float h, float e){
         if((fverlet=fopen("verlet.txt", "wt"))==NULL)
             puts ("error al abrir el archivo");
         else{
-            for (i=0; i<steps; i++){
+            for (int i=0; i<steps; i++){
                 fprintf(fverlet, "%f %f %f %f\n" , x[i], y[i], H[i], error[i]);
             }
             fclose(fverlet);
