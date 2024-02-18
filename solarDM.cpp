@@ -4,6 +4,8 @@
 #include<stdlib.h>
 #include <vector>
 
+bool debug = true;
+
 namespace physics
 {
 	const double G = 1;
@@ -12,7 +14,8 @@ namespace physics
 	const double e = 0.6;
 };
 
-struct OrbitPoint{
+/// A structure to store each point of a given orbit
+struct Particle{
 	double x = 0;
 	double y = 0;
 	double z = 0;
@@ -22,13 +25,20 @@ struct OrbitPoint{
 	double vz = 0;
 };
 
-// A static body
+// A structure to store the coordinates and mass of a static body
 struct Body{
 	double x = 0;
 	double y = 0;
 	double z = 0;
 
 	double Mass = 0;
+};
+
+struct NBodySystem
+{
+	std::vector <Body> bodies;
+
+	Particle particle;
 };
 
 struct Vector{
@@ -39,17 +49,37 @@ struct Vector{
 
 
 
-inline double VelocitySquared( const OrbitPoint &point )
+inline double VelocitySquared( const Particle &point )
 {
 	return (point.vx*point.vx + point.vy*point.vy + point.vz*point.vz);
 }
 
-inline double DistanceToCenterSquared( const OrbitPoint &point )
+inline double DistanceToCenterSquared( const Particle &point )
 {
 	return (point.x*point.x + point.y*point.y + point.z*point.z);
 }
 
-inline double DistanceToBodySquared( const OrbitPoint &point, const Body &body )
+Particle IncreasePosition( const Particle &point, double x, double y, double z )
+{
+	Particle newPoint = point;
+	newPoint.x += x;
+	newPoint.y += y;
+	newPoint.z += z;
+
+	return newPoint;
+}
+
+Particle IncreaseVelocity( const Particle &point, double vx, double vy, double vz )
+{
+	Particle newPoint = point;
+	newPoint.vx += vx;
+	newPoint.vy += vy;
+	newPoint.vz += vz;
+
+	return newPoint;
+}
+
+inline double DistanceToBodySquared( const Particle &point, const Body &body )
 {
 	double dx = point.x - body.x;
 	double dy = point.y - body.y;
@@ -58,7 +88,7 @@ inline double DistanceToBodySquared( const OrbitPoint &point, const Body &body )
 	return (dx*dx + dy*dy + dz*dz);
 }
 
-Vector KeplerForce(const OrbitPoint &particle, const std::vector <Body> bodies )
+Vector KeplerForce(const Particle &particle, const std::vector <Body> &bodies )
 { 
 	Vector force;
 	std::cout << "X: " << force.X << " Y: " << force.Y << " Z: " << force.Z << std::endl;
@@ -73,326 +103,183 @@ Vector KeplerForce(const OrbitPoint &particle, const std::vector <Body> bodies )
 	return force;
 }
 
-//double Energy( const OrbitPoint &point ){ return 0.5*(VelocitySquared(point)) - 1/(sqrt(DistanceSquared(point))); }
-
-std::vector <Body> InitializeTwoBodies()
-{
-	std::vector <Body> bodies;
-	
-	Body body1;
-	body1.x = 0;
-	body1.y = 0;
-	body1.z = 0;
-	body1.Mass = 1;
-
-	bodies.push_back( body1 );
-
-	Body body2;
-	body1.x = 100;
-	body1.y = 0;
-	body1.z = 0;
-	body1.Mass = 2;
-	bodies.push_back( body2 );
+double PotentialEnergy(const Particle& particle, const Body& body) {
+	// const double G = 6.67430e-11;  // Gravitational constant
+	const double G = 1;
+	double r = sqrt(DistanceToBodySquared(particle, body));
+	return -G * body.Mass / r;
 }
 
-void PrintBody( std::vector<Body> bodies, int n = 0 )
-{
-	if( n >= bodies.size() )
-		std::cout << "Index larger than number of bodies!" << std::endl;
-
-	std::cout << "Mass: " << bodies[n].Mass << " X: " << bodies[n].x << " Y: " << bodies[n].y << " Z: " << bodies[n].z << std::endl;
+double KineticEnergy(const Particle& particle) {
+	return 0.5 * (pow(particle.vx, 2) + pow(particle.vy, 2) + pow(particle.vz, 2));
 }
 
-int main()
-{
-	std::vector <Body> bodies = InitializeTwoBodies();
+double TotalEnergy( const Particle &particle, const std::vector <Body> &bodies ) { 
+	double totalU = 0.0;  // Total potential energy
+	for (const auto& body : bodies)
+		totalU += PotentialEnergy(particle, body);
 
-	PrintBody( bodies, 0 );
-	PrintBody( bodies, 1 );
+	double totalK = KineticEnergy(particle);
+	return totalU + totalK;
 }
 
-/*
-void EulerExplicito(int pasos, double h);
-void ImpMidpoint(int pasos, double h);
-void Verlet(int pasos, double h);
-void SympcEuler(int pasos, double h);
-void printEexplicito(double x[], double y[],double ener[], double err[], int pasos);
-void printEsymp(double x[], double y[],double ener[],double err[], int pasos);
-void printMidpoint(std::vector <double> x, std::vector<double> y, std::vector<double> en, std::vector<double> err);
-void printVerlet(double x[], double y[],double ener[],double err[], int pasos);
-double Calcerror(double x, double y); ///El valor de d hay que ponerlo a mano
-void CalculoAnalitico(int pasos);
-
-void RK4(double pasos, double h);
-// Es mejor omitir, para tener claro los miembros que vienen de std::
-//using namespace std;
-
-bool doVerlet = true;
-bool doMidPoint = false;
-bool doSymplectic = false;
-bool doRK4 =true;
-int main()
+NBodySystem InitAraujo_1( std::vector<double> params )
 {
+	NBodySystem nBodySystem;
 
-    //definición de d y L0
-    double d = 1.0 - e*e;
-    double L0 = sqrt(d);
-
-    printf("Parametros del sistema: H0 = %f  e = %f L0 = %f d = %f\n",H0,e, L0, d);
-    puts("Pulsa Intro para continuar ... ");
-    getchar();
-
-    // crear array de los pasos temporales para distintos métodos
-
-    double h[4];
-    int steps[4];
-    h[0]= 0.0005;
-    steps[0]=400000 ;//euler explicito
-    h[1]=0.01;
-    steps[1]=40000; //symplectic Euler, implicit midpoint, Verlet
-
-
-    ///SOLUCION ANALITICA (sale)
-    //CalculoAnalitico(steps[1]);
-    puts("Calculo analitico acabado ... ");
-
-    ///EULER EXPLÍCITO (sale)
-    //EulerExplicito(steps[0], h[0]);
-    // puts("Metodo Euler explicito acabado ... ");
-    //getchar();
-
-    ///VERLET (sale)
-    if( doVerlet )
-    {
-        Verlet(steps[1],h[1]);
-        puts("Metodo de Verlet acabado ... ");
-        getchar();
-    }
-
-    ///IMPLICIT MIDPOINT
-    if( doMidPoint )
-    {
-        ImpMidpoint(steps[1], h[1]);
-        puts("Metodo implicit midpoint acabado ... ");
-        getchar();
-    }
-
-    ///SYMPLECTIC EULER (sale)
-    if( doSymplectic )
-    {
-        SympcEuler(steps[1],h[1]);
-        puts("Metodo symplectic Euler acabado ... ");
-        getchar();
-    }
-
-    ///RK4
-    if( doRK4 )
-    {
-    RK4(steps[1],h[1]);
-        puts("Metodo RK4 acabado ... ");
-        getchar();
-    }
-
-
-    return 0;
-}
-
-void RK4(double pasos, double h){
-{
-
-}
-
-void RK4(double pasos, double h){
-
-	std::vector <double> x, y, vx, vy;
-	std::vector <double> energy, err;
-
-	x.push_back(0.0);
-	y.push_back(0.0);
-	vx.push_back(0);
-	vy.push_back(2);
-	energy.push_back(-0.5);
-	err.push_back(0.0);
-
-	for(int i=0; i < pasos-1; i++) {
-
-		/// Getting the last vector element
-		double Xo = x.back();
-		double Yo = y.back();
-
-		double VXo = vx.back();
-		double VYo = vy.back();
-
-		//printf( "xo = %f,  vx0 = %f, y0 = %f, vy0 = %f \n", Xo, VXo, Yo, VYo);
-
-		double k1_vx = f_Kepler(Xo, Yo);
-		double k1_vy = f_Kepler(Yo, Xo);
-
-		double k1_x = VXo;
-		double k1_y = VYo;
-
-
-		//printf( "VX k1 = %f, VY k1 = %f \n", k1_vx,k1_vy);
-
-
-		double k2_vx = f_Kepler(Xo + 0.5 * h * k1_x, Yo + 0.5 * h * k1_y );
-		double k2_vy = f_Kepler(Yo + 0.5 * h * k1_y, Xo + 0.5 * h * k1_x );
-
-		double k2_x = VXo + h * 0.5 * k1_vx;
-		double k2_y = VYo + h * 0.5 * k1_vy;
-
-
-		//printf( "VX k2 = %f, VY k2 = %f \n", k2_vx,k2_vy);
-
-		double k3_vx = f_Kepler(Xo + 0.5 * h * k2_x, Yo + 0.5 * h * k2_y );
-		double k3_vy = f_Kepler(Yo + 0.5 * h * k2_y, Xo + 0.5 * h * k2_x );
-
-		double k3_x = VXo + h * 0.5 * k2_vx;
-		double k3_y = VYo + h * 0.5 * k2_vy;
-
-		// printf( "VX k3 = %f, VY k3 = %f \n", k3_vx,k3_vy);
-
-		double k4_vx = f_Kepler(Xo + h * k3_x, Yo + h * k3_y );
-		double k4_vy = f_Kepler(Yo + h * k3_y, Xo + h * k3_x );
-
-		double k4_x = VXo + h * k3_vx;
-		double k4_y = VYo + h * k3_vy;
-
-		//printf( "VX k4 = %f, VY k4 = %f \n", k4_vx,k4_vy);
-
-
-		vx.push_back( VXo + h * (k1_vx + 2.0 * k2_vx + 2.0 * k3_vx + k4_vx) * 0.1666666 );
-		vy.push_back( VYo + h * (k1_vy + 2.0 * k2_vy + 2.0 * k3_vy + k4_vy) * 0.1666666 );
-
-
-		x.push_back( Xo +  h * (k1_x + 2.0 * k2_x + 2.0 * k3_x + k4_x) * 0.1666666 );
-		y.push_back( Yo +  h * (k1_y + 2.0 * k2_y + 2.0 * k3_y + k4_y) * 0.1666666 );
-
-
-
-		energy.push_back( Energia( x.back(), y.back(), vx.back(), vy.back() ) );
-		err.push_back(-(-0.5 - energy[i])/(-0.5));
-
-		//printf("Paso %d. X=%f  Y= %f Energia=%f  VEL VX = %f VY =%f\n", i, x[i], y[i], energy[i], vx[i],vy[i]);
-		// getchar();
+	if( params.size() != 4 )
+	{
+		std::cout << "Error. Araujo. It requires 4 parameters (M1,M2,d,v)" << std::endl;
+		return nBodySystem;
 	}
 
-	printf("X=%f Y =%f VX=%f VY=%f", x[pasos-1], y[pasos-1], vx[pasos-1],vy[pasos-1]);
-	FILE *f5 = fopen("RK4_prueba.txt", "w");
-	if(!f5) { printf("Error al abrir el archivo de texto."); exit(1); }
+	double M1 = params[0];
+	double M2 = params[1];
+	double d = params[2];
+	double v = params[3];
 
-	for(unsigned int i=0; i < x.size(); i++)
-		fprintf(f5,"%f   %f    %f   %f   %f\n", 0.01 * (double) i, x[i], y[i], energy[i], err[i]);
-	fclose(f5);
-}
+	double mu1 = M1/(M1+M2);
+	double mu2 = M2/(M1+M2);
 
+	Body body;
 
+	body.x = mu1;
+	body.y = 0;
+	body.z = 0;
+	body.Mass = M1;
 
+	std::vector <Body> bodies;
+	bodies.push_back( body );
 
+	body.x = -mu2;
+	body.y = 0;
+	body.z = 0;
+	body.Mass = M2;
 
+	bodies.push_back( body );
 
+	// We assign the bodies
+	nBodySystem.bodies = bodies;
 
-void printEexplicito(double x[], double y[],double ener[],double err[], int pasos){
-    double aux;
-FILE *f1;
- f1=fopen("Euler_explicito.txt", "w");
-	if(f1==NULL){printf("Error al abrir el archivo de texto.");exit(1);	}
-
-    for(int i=0;i<pasos;i++){
-            aux=i*0.05;
-
-            fprintf(f1,"%f   %f    %f   %f   %f\n",aux,x[i],y[i],ener[i], err[i]);
-    }
-    fclose(f1);
-
-
-
-}
-
-void printEsymp(double x[], double y[],double ener[],double err[], int pasos){
-    double aux;
-FILE *f2;
- f2=fopen("Euler_symp_0001.txt", "w");
-	if(f2==NULL){printf("Error al abrir el archivo de texto.");exit(1);	}
-
-    for(int i=0;i<pasos;i++){
-            aux=i*0.001;
-            fprintf(f2,"%f   %f    %f   %f   %f\n",aux,x[i],y[i],ener[i], err[i]);
-
-    }
-    fclose(f2);
-
+	// We assign the particle
+	Particle particle;
+	particle.x = mu1 + d;
+	particle.vy = v - d;
+	nBodySystem.particle = particle;
 
 }
 
+NBodySystem InitializeNBodySystem(std::string config, std::vector <double> params) {
+	
+	NBodySystem nBodySystem;
 
+	if( config == "Araujo_1" )
+		return InitAraujo_1(params);
 
-
-void printVerlet(double x[], double y[],double ener[],double err[], int pasos){
-    double aux;
-FILE *f4;
- f4=fopen("Verlet_prueba.txt", "w");
-	if(f4==NULL){printf("Error al abrir el archivo de texto.");exit(1);	}
-
-    for(int i=0;i<pasos;i++){
-             aux=i*0.01;
-            fprintf(f4,"%f   %f    %f   %f   %f\n",aux,x[i],y[i],ener[i], err[i]);
-    }
-    fclose(f4);
+	return nBodySystem;
 }
 
-
-double Calcerror(double x, double y){
-double phi,r,r_teo,err,d;
-double pi;
-pi=4*atan(1.0);
-d=1-e*e;
-if(x>0 && y>=0) phi=(double)atan(y/x);
-if(x==0 && y>0) phi=0.5*pi;
-if(x>0 && y <0) phi=(double)atan(y/x) + 2*pi;
-if(x<0) phi=(double)atan(y/x) + pi;
-if(x==0 && y<0) phi=1.5*pi;
-
-r=sqrt(x*x+y*y);
-r_teo= (d)/(1.0+e*(double)cos(phi));
-
-err=(r_teo-r)*(r_teo - r);
-return err;
-
+void PrintBody( const Body &body ) {
+	std::cout << "Mass: " << body.Mass << " X: " << body.x << " Y: " << body.y << " Z: " << body.z << std::endl;
 }
 
-void CalculoAnalitico(int pasos){
-    double pi;
-pi=4*atan(1.0);
-double delta=(2*pi)/(double)pasos;
-//printf("delta %f \n", delta);
-double d=1-e*e;
-double x[pasos];
-double y[pasos];
-
-double phi,r;
-phi=0;
-
-for(int i=0; i<pasos; i++){
-r= (d)/(1.0+e*(double)cos(phi));
-x[i]=r*cos(phi);
-y[i]=r*sin(phi);
-phi=phi+delta;
-//printf("Paso %d. phi = %f, r = %f,  x = %f , y= %f \n", i,phi, r, x[i],y[i]);
-//getchar();
+void PrintBodies( const std::vector<Body> &bodies ) {
+	std::cout << " = Bodies = " << std::endl;
+	std::cout << " ------------ " << std::endl;
+	for( const auto &b : bodies )
+		PrintBody( b );
+	std::cout << " ------------ " << std::endl;
 }
 
-FILE *f5;
- f5=fopen("Analitico.txt", "w");
-	if(f5==NULL){printf("Error al abrir el archivo de texto.");exit(1);	}
-
-    for(int i=0;i<pasos;i++){
-
-            fprintf(f5,"%f   %f\n",x[i],y[i]);
-    }
-    fclose(f5);
-
+void PrintParticle( const Particle &particle ) {
+	std::cout << " = Particle = " << std::endl;
+	std::cout << " ------------ " << std::endl;
+	std::cout << "x: " << particle.x << " y: " << particle.y << " z: " << particle.z << std::endl;
+	std::cout << "vx: " << particle.vx << " vy: " << particle.vy << " vz: " << particle.vz << std::endl;
+	std::cout << " ------------ " << std::endl;
 }
 
-*/
+void PrintNBodySystem( const NBodySystem &nBodySystem )
+{
+	PrintParticle( nBodySystem.particle );
+	PrintBodies( nBodySystem.bodies );
+}
+
+Particle RK4( const Particle &particle, const std::vector <Body> &bodies, double h = 0.01){
+
+	Particle newParticle = particle;
+	Vector force = KeplerForce(particle, bodies);
+
+ 	/// ----->  k1 
+	double k1_vx = force.X;
+	double k1_vy = force.Y;
+	double k1_vz = force.Z;
+
+	double k1_x = particle.vx;
+	double k1_y = particle.vy;
+	double k1_z = particle.vz;
+
+	newParticle = IncreasePosition( particle, 0.5*h*k1_x, 0.5*h*k1_y, 0.5*h*k1_z );
+	force = KeplerForce( newParticle, bodies );
+
+ 	/// ----->  k2
+	double k2_x = particle.vx + h * 0.5 * k1_vx;
+	double k2_y = particle.vy + h * 0.5 * k1_vy;
+	double k2_z = particle.vz + h * 0.5 * k1_vz;
+
+	double k2_vx = force.X;
+	double k2_vy = force.Y;
+	double k2_vz = force.Z;
+
+	newParticle = IncreasePosition( particle, 0.5*h*k2_x, 0.5*h*k2_y, 0.5*h*k2_z );
+	force = KeplerForce( newParticle, bodies );
+
+ 	/// ----->  k3
+	double k3_vx = force.X;
+	double k3_vy = force.Y;
+	double k3_vz = force.Z;
+
+	double k3_x = particle.vx + h * 0.5 * k2_vx;
+	double k3_y = particle.vy + h * 0.5 * k2_vy;
+	double k3_z = particle.vz + h * 0.5 * k2_vz;
+
+	newParticle = IncreasePosition( particle, h*k3_x, h*k3_y, h*k3_z );
+	force = KeplerForce( newParticle, bodies );
+
+ 	/// ----->  k4
+	double k4_vx = force.X;
+	double k4_vy = force.Y;
+	double k4_vz = force.Z;
+
+	double k4_x = particle.vx + h * k3_vx;
+	double k4_y = particle.vx + h * k3_vy;
+	double k4_z = particle.vx + h * k3_vz;
+
+	double dX = h * (k1_x + 2.0 * k2_x + 2.0 * k3_x + k4_x)/6.;
+	double dY = h * (k1_y + 2.0 * k2_y + 2.0 * k3_y + k4_y)/6.;
+	double dZ = h * (k1_z + 2.0 * k2_z + 2.0 * k3_z + k4_z)/6.;
+
+	double dVX = h * (k1_vx + 2.0 * k2_vx + 2.0 * k3_vx + k4_vx)/6.;
+	double dVY = h * (k1_vy + 2.0 * k2_vy + 2.0 * k3_vy + k4_vy)/6.;
+	double dVZ = h * (k1_vz + 2.0 * k2_vz + 2.0 * k3_vz + k4_vz)/6.;
+
+	newParticle = IncreasePosition( particle, dX, dY, dZ);
+	newParticle = IncreaseVelocity( particle, dVX, dVY, dVZ);
+
+	return newParticle;
+}
+
+int main() {
+	/// M1, M2, d , v 
+	std::vector <double> araujaParams {1., 1e-7, 0.00287, 0.0050};
+	NBodySystem nBodySystem = InitializeNBodySystem( "Araujo_1", araujaParams );
+
+	PrintNBodySystem( nBodySystem );
+
+	/*
+	Particle particle;
+
+	particle = RK4 ( particle, bodies );
+	*/
+}
 

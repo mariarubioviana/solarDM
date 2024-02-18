@@ -8,7 +8,7 @@ add_executable(solarDM solarDM.cpp)  # Nombre del ejecutable y lista de archivos
 # Opcional: Configurar las opciones de compilación
 set(CMAKE_CXX_STANDARD 14)  # Establecer el estándar de C++ (por ejemplo, C++11)
 
-add_compile_options(-std=c++11 -Wc++11-extensions)
+add_compile_options(-std=c++14 -Wno-c++11-extensions)
 
 # Opcional: Agregar directorios de inclusión
 # include_directories(path/to/include/directory)
