@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.28)  # Versión mínima requerida de CMake
+cmake_minimum_required(VERSION 3.18)  # Versión mínima requerida de CMake
 
 project(SolarDM)  # Nombre del proyecto
 
