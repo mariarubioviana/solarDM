@@ -2,38 +2,157 @@
 #include <math.h>
 #include<stdio.h>
 #include<stdlib.h>
+#include <fstream> 
 #include <vector>
+#include <string>
+#include <sstream>
 
-bool debug = true;
+bool debug = false;
 
 namespace physics
 {
-	const double G = 1;
-	const double H0 = -0.5;
-	const double phi1 = 0;
-	const double e = 0.6;
+	 double G = 1;
+	 double H0 = -0.5;
+	 double phi1 = 0;
+	 double e = 0.6;
 };
 
-/// A structure to store each point of a given orbit
-struct Particle{
-	double x = 0;
-	double y = 0;
-	double z = 0;
+//// Vector3D class definition and operations
+class Vector3D {
+	public:
+	double x = 0,y = 0,z = 0;
+	Vector3D(double a = 0, double b = 0, double c = 0)  : x(a), y(b), z(c) { }
+	double  X() const { return x; }
+	double  Y() const { return y; }
+	double  Z() const { return z; }
 
-	double vx = 0;
-	double vy = 0;
-	double vz = 0;
+	void Print( std::string name = "" ) 
+	{
+		std::cout << "Vector3D=" << name << "("<<X()<<","<<Y()<<","<<Z()<<")" << std::endl;
+	}
+
+	/// Operators
+	Vector3D& operator += (const Vector3D & b)  {
+		x += b.X(); y += b.Y(); z += b.Z();
+		return *this;
+	}
+
+	Vector3D& operator -= (const Vector3D & b)  {
+		x -= b.X(); y -= b.Y(); z -= b.Z();
+		return *this;
+	}
+
+	Vector3D& operator *= (const double & b)  {
+		x = b*X(); y = b*Y(); z = b*Z();
+		return *this;
+	}
+	
+	Vector3D& operator /= (const double & b)  {
+		x = b/X(); y = b/Y(); z = b/Z();
+		return *this;
+	}
 };
 
-// A structure to store the coordinates and mass of a static body
+Vector3D operator + (const Vector3D & a, const Vector3D & b)  {
+	    return Vector3D(a) += b;
+}
+
+Vector3D operator - (const Vector3D & a, const Vector3D & b)  {
+	    return Vector3D(a) -= b;
+}
+
+Vector3D operator * ( const double& a, const Vector3D & b)  {
+	    return Vector3D( a*b.X(), a*b.Y(), a*b.Z());
+}
+
+Vector3D operator * (const Vector3D & b, const double& a )  {
+	    return Vector3D( a*b.X(), a*b.Y(), a*b.Z());
+}
+
+Vector3D operator / ( const Vector3D & b, const double& a ) {
+	    return Vector3D( b.X()/a, b.Y()/a, b.Z()/a);
+}
+
+// Body structure to store the coordinates and mass
 struct Body{
-	double x = 0;
-	double y = 0;
-	double z = 0;
+	Vector3D position;
+	Vector3D velocity;
 
 	double Mass = 0;
+
+	void Print( std::string name = "" ) const {
+		std::cout << " = Body (" << name << ") = " << std::endl;
+		std::cout << " ------------------- " << std::endl;
+		std::cout << "Mass: " << Mass << " X: " << position.X() << " Y: " << position.Y() << " Z: " << position.Z() << std::endl;
+		std::cout << "vX: " << velocity.X() << " vY: " << velocity.Y() << " vZ: " << velocity.Z() << std::endl;
+	}
 };
 
+/// Particle structure to store each point of a given orbit
+struct Particle{
+	Vector3D position;
+	Vector3D velocity;
+
+	/// Returns the squared velocity of the particle
+	inline double VelocitySquared( )
+	{
+		return (velocity.X()*velocity.X() + velocity.Y()*velocity.Y() + velocity.Z()*velocity.Z());
+	}
+
+	/// Returns the distance squared between the particle and the origin
+	inline double DistanceToCenterSquared( )
+	{
+		return (position.X()*position.X() + position.Y()*position.Y() + position.Z()*position.Z());
+	}
+	
+	/// It returns the distance between the particle and the body given by argument
+	inline double DistanceToBodySquared( const Body &b ) const {
+		double dx = position.X() - b.position.X();
+		double dy = position.Y() - b.position.Y();
+		double dz = position.Z() - b.position.Z();
+
+		return (dx*dx + dy*dy + dz*dz);
+	}
+
+	/// It returns the potential energy of the particle respect to a given body
+	double PotentialEnergy( const Body &body) const {
+		double r = sqrt(DistanceToBodySquared( body));
+		return -physics::G * body.Mass / r;
+	}
+
+	/// It returns the kinetic energy of the particle respect to a given body
+	double KineticEnergy( const Body &body) const {
+		return 0.5 * (pow(velocity.X()-body.velocity.X(), 2) + pow(velocity.Y()-body.velocity.Y(), 2) + pow(velocity.Z()-body.velocity.Z(), 2));
+	}
+	
+	/// It returns the total energy, kinetic energy is calculated respect to a given body (given by n)
+	double TotalEnergy(  const std::vector <Body> &bodies, int n = 0 ) { 
+		if( bodies.size() == 0 ) return 0;
+
+		double totalU = 0.0;  // Total potential energy
+		for ( auto& body : bodies)
+			totalU += PotentialEnergy( body);
+
+		double totalK = KineticEnergy( bodies[n]);
+		return totalU + totalK;
+	}
+
+	double BodyEnergy( const Body &body ) const { 
+		double totalU = PotentialEnergy( body);  // Total potential energy
+		double totalK = KineticEnergy( body);
+		return totalU + totalK;
+	}
+
+	void Print( std::string name = "" ) {
+		std::cout << " = Particle (" << name << ") = " << std::endl;
+		std::cout << " ----------- " << std::endl;
+		std::cout << "x: " << position.X() << " y: " << position.Y() << " z: " << position.Z() << std::endl;
+		std::cout << "vx: " << velocity.X() << " vy: " << velocity.Y() << " vz: " << velocity.Z() << std::endl;
+		std::cout << " ----------- " << std::endl;
+	}
+};
+
+// A structure to store the complete gravitational system
 struct NBodySystem
 {
 	std::vector <Body> bodies;
@@ -41,245 +160,379 @@ struct NBodySystem
 	Particle particle;
 };
 
-struct Vector{
-	double X = 0;
-	double Y = 0;
-	double Z = 0;
-};
 
-
-
-inline double VelocitySquared( const Particle &point )
-{
-	return (point.vx*point.vx + point.vy*point.vy + point.vz*point.vz);
+///// Helper Methods /////
+void GetChar() {
+	std::cout << "Press a key to continue ... " << std::endl;
+	getchar();
 }
 
-inline double DistanceToCenterSquared( const Particle &point )
-{
-	return (point.x*point.x + point.y*point.y + point.z*point.z);
-}
 
-Particle IncreasePosition( const Particle &point, double x, double y, double z )
-{
-	Particle newPoint = point;
-	newPoint.x += x;
-	newPoint.y += y;
-	newPoint.z += z;
-
-	return newPoint;
-}
-
-Particle IncreaseVelocity( const Particle &point, double vx, double vy, double vz )
-{
-	Particle newPoint = point;
-	newPoint.vx += vx;
-	newPoint.vy += vy;
-	newPoint.vz += vz;
-
-	return newPoint;
-}
-
-inline double DistanceToBodySquared( const Particle &point, const Body &body )
-{
-	double dx = point.x - body.x;
-	double dy = point.y - body.y;
-	double dz = point.z - body.z;
-
-	return (dx*dx + dy*dy + dz*dz);
-}
-
-Vector KeplerForce(const Particle &particle, const std::vector <Body> &bodies )
-{ 
-	Vector force;
-	std::cout << "X: " << force.X << " Y: " << force.Y << " Z: " << force.Z << std::endl;
-	for( const auto &body: bodies )
+/// It returns the distance between the particle and the body given by argument
+Vector3D KeplerForce( Particle p,  std::vector <Body> bodies ) {
+	Vector3D force;
+	force.Print("Init");
+	int cont = 0;
+	for(  auto &b: bodies )
 	{
-		double r3 = pow( DistanceToBodySquared( particle, body ), 1.5 );
-		force.X -= physics::G * body.Mass * ( particle.x - body.x )/r3;
-		force.Y -= physics::G * body.Mass * ( particle.y - body.y )/r3;
-		force.Z -= physics::G * body.Mass * ( particle.z - body.z )/r3;
+		cont++;
+		double r3 = pow( p.DistanceToBodySquared( b ), 1.5 );
+		double forceX = - physics::G * b.Mass * ( p.position.X() - b.position.X() )/r3;
+		//std::cout << "Body: " << cont << " r3 : " << r3 << " Mass : " << b.Mass << " diff: " << p.position.X() - b.position.X() << " r3: " << r3 << " ForceX: " << forceX << std::endl;
+		if( debug )
+		{
+			std::cout << "Body: " << cont << " Mass : " << b.Mass << " diff: " << p.position.X() - b.position.X() << " r3: " << r3 << " ForceX: " << forceX << std::endl;
+		}
+		force.x -= physics::G * b.Mass * ( p.position.X() - b.position.X() )/r3;
+		force.y -= physics::G * b.Mass * ( p.position.Y() - b.position.Y() )/r3;
+		force.z -= physics::G * b.Mass * ( p.position.Z() - b.position.Z() )/r3;
+		force.Print(std::to_string(cont));
+
 	}
 
+	//GetChar();
 	return force;
 }
 
-double PotentialEnergy(const Particle& particle, const Body& body) {
-	// const double G = 6.67430e-11;  // Gravitational constant
-	const double G = 1;
-	double r = sqrt(DistanceToBodySquared(particle, body));
-	return -G * body.Mass / r;
-}
 
-double KineticEnergy(const Particle& particle) {
-	return 0.5 * (pow(particle.vx, 2) + pow(particle.vy, 2) + pow(particle.vz, 2));
-}
 
-double TotalEnergy( const Particle &particle, const std::vector <Body> &bodies ) { 
-	double totalU = 0.0;  // Total potential energy
-	for (const auto& body : bodies)
-		totalU += PotentialEnergy(particle, body);
+///// Print Methods /////
 
-	double totalK = KineticEnergy(particle);
-	return totalU + totalK;
-}
-
-NBodySystem InitAraujo_1( std::vector<double> params )
-{
-	NBodySystem nBodySystem;
-
-	if( params.size() != 4 )
+/*
+void PrintBodies(  std::vector<Body> bodies ) {
+	std::cout << " = Bodies = " << std::endl;
+	std::cout << " ------------ " << std::endl;
+	int cont = 0;
+	for( auto &b : bodies )
 	{
-		std::cout << "Error. Araujo. It requires 4 parameters (M1,M2,d,v)" << std::endl;
-		return nBodySystem;
+		b.Print( );
+		cont ++;
+	}
+	std::cout << " ------------ " << std::endl;
+}
+
+void PrintParticle(  Particle p, std::string name = "" ) {
+	std::cout << " = Particle (" << name << ") = " << std::endl;
+	std::cout << " ------------------- " << std::endl;
+	std::cout << "x: " << p.position.X() << " y: " << p.position.Y() << " z: " << p.position.Z() << std::endl;
+	std::cout << "vx: " << p.velocity.X() << " vy: " << p.velocity.Y() << " vz: " << p.velocity.Z() << std::endl;
+	std::cout << " ------------------- " << std::endl;
+}
+
+void PrintEnergies(  NBodySystem nBodySystem ) {
+	int cont = 0;
+	std::cout << " = Energies = " << std::endl;
+	std::cout << " ------------ " << std::endl;
+	for(  auto &b: nBodySystem.bodies)
+	{
+		std::cout << "Body " << cont << " energy = " << nBodySystem.particle.BodyEnergy(b) << std::endl;
+		cont++;
+	}
+	std::cout << " ------------ " << std::endl;
+}
+
+void PrintNBodySystem(  NBodySystem nBodySystem, std::string name="" ) {
+	PrintParticle( nBodySystem.particle, name );
+	PrintBodies( nBodySystem.bodies );
+	PrintEnergies( nBodySystem );
+	GetChar();
+}
+*/
+
+///// Initialization Methods /////
+std::pair<Particle,std::vector<Body>> InitInes()
+{
+	Particle particle;
+	std::vector <Body> bodies;
+
+	Body b;
+
+	b.position.x = 0;
+	b.position.y = 0;
+	b.position.z = 0;
+
+	/// Velocity at the synodic system
+	b.velocity.x = 0;
+	b.velocity.y = 0;
+	b.velocity.z = 0;
+	b.Mass = 1;
+
+	bodies.push_back( b );
+
+	// We assign the particle
+	particle.position.x = 0.4;
+	
+	/// Velocity at the synodic system
+	particle.velocity.y = 2;
+
+	return {particle,bodies};
+}
+
+std::pair<Particle,std::vector<Body>> InitAraujo( std::vector<double> params ) {
+	Particle particle;
+	std::vector <Body> bodies;
+
+	if( params.size() != 3 )
+	{
+		std::cout << "Error. Araujo. It requires 3 parameters (M2,v,d)" << std::endl;
+		return {particle,bodies};
 	}
 
-	double M1 = params[0];
-	double M2 = params[1];
+	double M1 = 1 - params[0];
+	double M2 = params[0];
+	double v = params[1];
 	double d = params[2];
-	double v = params[3];
 
 	double mu1 = M1/(M1+M2);
 	double mu2 = M2/(M1+M2);
 
-	Body body;
+	Body b;
 
-	body.x = mu1;
-	body.y = 0;
-	body.z = 0;
-	body.Mass = M1;
+	b.position.x = -mu2;
+	b.position.y = 0;
+	b.position.z = 0;
 
-	std::vector <Body> bodies;
-	bodies.push_back( body );
+	/// Velocity at the synodic system
+	b.velocity.x = 0;
+	b.velocity.y = 0;
+	b.velocity.z = 0;
+	b.Mass = M1;
 
-	body.x = -mu2;
-	body.y = 0;
-	body.z = 0;
-	body.Mass = M2;
+	bodies.push_back( b );
 
-	bodies.push_back( body );
+	b.position.x = mu1;
+	b.position.y = 0;
+	b.position.z = 0;
+	
+	/// Velocity at the synodic system
+	b.velocity.x = 0;
+	b.velocity.y = 0;
+	b.velocity.z = 0;
+	b.Mass = M2;
 
-	// We assign the bodies
-	nBodySystem.bodies = bodies;
+	bodies.push_back( b );
 
 	// We assign the particle
-	Particle particle;
-	particle.x = mu1 + d;
-	particle.vy = v - d;
-	nBodySystem.particle = particle;
-
-}
-
-NBodySystem InitializeNBodySystem(std::string config, std::vector <double> params) {
+	particle.position.x = mu1 + d;
 	
-	NBodySystem nBodySystem;
+	/// Velocity at the synodic system
+	particle.velocity.y = v - d;
 
-	if( config == "Araujo_1" )
-		return InitAraujo_1(params);
-
-	return nBodySystem;
+	return {particle, bodies};
 }
 
-void PrintBody( const Body &body ) {
-	std::cout << "Mass: " << body.Mass << " X: " << body.x << " Y: " << body.y << " Z: " << body.z << std::endl;
+std::pair<Particle,std::vector<Body>> InitializeSystem(std::string config, std::vector <double> params = {}) {
+	
+	std::pair<Particle, std::vector<Body>> system = InitInes();
+
+	if( config == "Araujo" )
+		system = InitAraujo(params);
+
+	if( config == "Ines" )
+		system = InitInes();
+
+	if( true )
+	{
+		system.first.Print("Init");
+		for( const auto &b : system.second )
+			b.Print();
+	}
+
+	return system;
 }
 
-void PrintBodies( const std::vector<Body> &bodies ) {
-	std::cout << " = Bodies = " << std::endl;
-	std::cout << " ------------ " << std::endl;
-	for( const auto &b : bodies )
-		PrintBody( b );
-	std::cout << " ------------ " << std::endl;
+void RK4( Particle &particle,  std::vector <Body> &bodies, double h = 0.01){
+
+	// Initial values
+	Particle initialParticle = particle;
+
+	// k1, l1
+	Vector3D k1 = h * initialParticle.velocity;
+	Vector3D l1 = h * KeplerForce(particle, bodies);
+
+	if( debug )
+	{
+		k1.Print("k1");
+		l1.Print("l1");
+	}
+
+	// k2
+	Particle k2particle;
+	if( debug )
+	{
+		k2particle.Print("k2");
+		KeplerForce( particle, bodies).Print("ForceInitial");
+		initialParticle.Print("initial");
+	}
+
+	k2particle.position = initialParticle.position + k1/2.;
+	k2particle.velocity = initialParticle.velocity + l1/2.;
+	if( debug )
+	{
+		k2particle.Print("k2particle");
+	}
+
+	Vector3D k2 = h * k2particle.velocity;
+	Vector3D l2 = h * KeplerForce( k2particle, bodies);
+	if( debug )
+	{
+		k2.Print("k2");
+		l2.Print("l2");
+		KeplerForce( k2particle, bodies).Print("ForceK2");
+	}
+
+	// k3
+	Particle k3particle;
+	k3particle.position = initialParticle.position + k2/2.;
+	k3particle.velocity = initialParticle.velocity + l2/2.;
+	if( debug )
+	{
+		k3particle.Print("k3");
+	}
+
+	Vector3D k3 = h * k3particle.velocity;
+	Vector3D l3 = h * KeplerForce( k3particle, bodies);
+	if( debug )
+	{
+		KeplerForce( k3particle, bodies).Print("ForceK3");
+		k3.Print("k3");
+		l3.Print("l3");
+	}
+
+	// k3
+	Particle k4particle;
+	k4particle.position = initialParticle.position + k3;
+	k4particle.velocity = initialParticle.velocity + l3;
+	if( debug )
+	{
+		k4particle.Print("k4");
+	}
+
+	Vector3D k4 = h * k4particle.velocity;
+	Vector3D l4 = h * KeplerForce( k4particle, bodies);
+	if( debug )
+	{
+		k4.Print("k4");
+		l4.Print("l4");
+		KeplerForce( k4particle, bodies).Print("ForceK4");
+	}
+
+	// Update position and velocity
+	particle.position = initialParticle.position + (k1 + 2.0 * k2 + 2.0 * k3 + k4) / 6.0;
+	particle.velocity = initialParticle.velocity + (l1 + 2.0 * l2 + 2.0 * l3 + l4) / 6.0;
 }
 
-void PrintParticle( const Particle &particle ) {
-	std::cout << " = Particle = " << std::endl;
-	std::cout << " ------------ " << std::endl;
-	std::cout << "x: " << particle.x << " y: " << particle.y << " z: " << particle.z << std::endl;
-	std::cout << "vx: " << particle.vx << " vy: " << particle.vy << " vz: " << particle.vz << std::endl;
-	std::cout << " ------------ " << std::endl;
-}
-
-void PrintNBodySystem( const NBodySystem &nBodySystem )
+void WriteParticle( std::ofstream &ofile, double t, const Particle &p, const std::vector <Body> bodies )
 {
-	PrintParticle( nBodySystem.particle );
-	PrintBodies( nBodySystem.bodies );
-}
+	ofile << t << "\t" <<  p.position.X() << "\t" << p.position.Y() << "\t" << p.position.Z() << "\t" << p.velocity.X() << "\t" << p.velocity.Y() << "\t" << p.velocity.Z();
 
-Particle RK4( const Particle &particle, const std::vector <Body> &bodies, double h = 0.01){
-
-	Particle newParticle = particle;
-	Vector force = KeplerForce(particle, bodies);
-
- 	/// ----->  k1 
-	double k1_vx = force.X;
-	double k1_vy = force.Y;
-	double k1_vz = force.Z;
-
-	double k1_x = particle.vx;
-	double k1_y = particle.vy;
-	double k1_z = particle.vz;
-
-	newParticle = IncreasePosition( particle, 0.5*h*k1_x, 0.5*h*k1_y, 0.5*h*k1_z );
-	force = KeplerForce( newParticle, bodies );
-
- 	/// ----->  k2
-	double k2_x = particle.vx + h * 0.5 * k1_vx;
-	double k2_y = particle.vy + h * 0.5 * k1_vy;
-	double k2_z = particle.vz + h * 0.5 * k1_vz;
-
-	double k2_vx = force.X;
-	double k2_vy = force.Y;
-	double k2_vz = force.Z;
-
-	newParticle = IncreasePosition( particle, 0.5*h*k2_x, 0.5*h*k2_y, 0.5*h*k2_z );
-	force = KeplerForce( newParticle, bodies );
-
- 	/// ----->  k3
-	double k3_vx = force.X;
-	double k3_vy = force.Y;
-	double k3_vz = force.Z;
-
-	double k3_x = particle.vx + h * 0.5 * k2_vx;
-	double k3_y = particle.vy + h * 0.5 * k2_vy;
-	double k3_z = particle.vz + h * 0.5 * k2_vz;
-
-	newParticle = IncreasePosition( particle, h*k3_x, h*k3_y, h*k3_z );
-	force = KeplerForce( newParticle, bodies );
-
- 	/// ----->  k4
-	double k4_vx = force.X;
-	double k4_vy = force.Y;
-	double k4_vz = force.Z;
-
-	double k4_x = particle.vx + h * k3_vx;
-	double k4_y = particle.vx + h * k3_vy;
-	double k4_z = particle.vx + h * k3_vz;
-
-	double dX = h * (k1_x + 2.0 * k2_x + 2.0 * k3_x + k4_x)/6.;
-	double dY = h * (k1_y + 2.0 * k2_y + 2.0 * k3_y + k4_y)/6.;
-	double dZ = h * (k1_z + 2.0 * k2_z + 2.0 * k3_z + k4_z)/6.;
-
-	double dVX = h * (k1_vx + 2.0 * k2_vx + 2.0 * k3_vx + k4_vx)/6.;
-	double dVY = h * (k1_vy + 2.0 * k2_vy + 2.0 * k3_vy + k4_vy)/6.;
-	double dVZ = h * (k1_vz + 2.0 * k2_vz + 2.0 * k3_vz + k4_vz)/6.;
-
-	newParticle = IncreasePosition( particle, dX, dY, dZ);
-	newParticle = IncreaseVelocity( particle, dVX, dVY, dVZ);
-
-	return newParticle;
-}
-
-int main() {
-	/// M1, M2, d , v 
-	std::vector <double> araujaParams {1., 1e-7, 0.00287, 0.0050};
-	NBodySystem nBodySystem = InitializeNBodySystem( "Araujo_1", araujaParams );
-
-	PrintNBodySystem( nBodySystem );
-
+	for( const auto &b: bodies)
+		ofile << "\t" << p.BodyEnergy(b);
+	
 	/*
-	Particle particle;
+	for( const auto &b: bodies)
+		ofile << "\t" << p.DistanceToBodySquared( b);
+		*/
 
-	particle = RK4 ( particle, bodies );
-	*/
+	ofile << "\n";
 }
 
+void displayHelp(const char* programName) {
+	std::cout << "Usage: " << programName << " [options]" << std::endl;
+	std::cout << "Options:" << std::endl;
+	std::cout << "  --output <output_filename>: Set the output filename (default: out.txt)" << std::endl;
+	std::cout << "  --system <system_name>: Set the system name (default: Araujo)" << std::endl;
+	std::cout << "  --params <param1,param2,...>: Set the parameters as a comma-separated list of values" << std::endl;
+	std::cout << "  --help: Display this help message" << std::endl;
+}
+
+//// It stars the main program ////
+int main(int argc, char* argv[]) {
+
+	std::string outputFilename = "out.txt";
+	std::string systemName = "Araujo";
+	// M2, v, d
+	std::vector<double> params = { 1.e-7, 0.005, 0.00287};
+
+	// Parse command-line arguments
+	for (int i = 1; i < argc; ++i) {
+		std::string arg = argv[i];
+		if (arg == "--output") {
+			if (i + 1 < argc) {
+				outputFilename = argv[i + 1];
+				++i;  // skip the next argument
+			} else {
+				std::cerr << "--output option requires one argument." << std::endl;
+				return 1;
+			}
+		} else if (arg == "--system") {
+			if (i + 1 < argc) {
+				systemName = argv[i + 1];
+				++i;  // skip the next argument
+			} else {
+				std::cerr << "--system option requires one argument." << std::endl;
+				return 1;
+			}
+		} else if (arg == "--params") {
+			if (i + 1 < argc) {
+				std::string paramsString = argv[i + 1];
+				std::istringstream iss(paramsString);
+				double param;
+				char delimiter;
+				params.clear();
+				while (iss >> param) {
+					params.push_back(param);
+					if (!(iss >> delimiter && delimiter == ',')) {
+						break;  // break if delimiter is not ','
+					}
+				}
+				++i;  // skip the next argument
+			} else {
+				std::cerr << "--params option requires one argument." << std::endl;
+				return 1;
+			}
+		}
+		else if (arg == "--help") {
+			displayHelp(argv[0]);
+			return 0;
+		}
+	}
+
+	// Now you can use the parsed arguments
+	std::cout << "Output Filename: " << outputFilename << std::endl;
+	std::cout << "System Name: " << systemName << std::endl;
+	std::cout << "Params: ";
+
+	if (params.empty()) {
+		std::cout << "{}";
+	} else {
+		for (double param : params) {
+			std::cout << param << " ";
+		}
+	}
+	std::cout << std::endl;
+
+	if (argc < 2) {
+		displayHelp(argv[0]);
+		return 1; // indicating an error
+	}
+
+	std::pair<Particle, std::vector<Body>> nBodySystem = InitializeSystem(systemName, params);
+	Particle particle = nBodySystem.first;
+	std::vector <Body> bodies = nBodySystem.second;
+
+	std::ofstream outputFile( outputFilename, std::ofstream::out ); // Open file for appending
+
+	double deltaT = 0.01;
+	double t = 0;
+	WriteParticle( outputFile, t, particle, bodies );
+
+	while ( t < 1.25 * 2 * M_PI )
+	{
+		t += deltaT;
+		RK4 ( particle, bodies, deltaT );
+		/* if( debug ) { PrintNBodySystem( nBodySystem ); } */
+		WriteParticle( outputFile, t, particle, bodies );
+	}
+	outputFile.close();
+}
