@@ -8,6 +8,8 @@
 #include <sstream>
 
 bool debug = false;
+bool info = true;
+double DT = 0.001; // differential step
 
 namespace physics
 {
@@ -78,12 +80,23 @@ struct Body{
 	Vector3D position;
 	Vector3D velocity;
 
-	double Mass = 0;
+	double M = 0;
+	double R = 0;
+
+	double Mass( double r3 = 0 ) const
+	{
+		if( r3 < R )
+		{
+			return M * r3/R/R/R;
+		}
+		else
+			return M;
+	}
 
 	void Print( std::string name = "" ) const {
 		std::cout << " = Body (" << name << ") = " << std::endl;
 		std::cout << " ------------------- " << std::endl;
-		std::cout << "Mass: " << Mass << " X: " << position.X() << " Y: " << position.Y() << " Z: " << position.Z() << std::endl;
+		std::cout << "Mass: " << M << " Radius: " << R << " X: " << position.X() << " Y: " << position.Y() << " Z: " << position.Z() << std::endl;
 		std::cout << "vX: " << velocity.X() << " vY: " << velocity.Y() << " vZ: " << velocity.Z() << std::endl;
 	}
 };
@@ -117,7 +130,7 @@ struct Particle{
 	/// It returns the potential energy of the particle respect to a given body
 	double PotentialEnergy( const Body &body) const {
 		double r = sqrt(DistanceToBodySquared( body));
-		return -physics::G * body.Mass / r;
+		return -physics::G * body.Mass(r*r*r) / r;
 	}
 
 	/// It returns the kinetic energy of the particle respect to a given body
@@ -153,8 +166,7 @@ struct Particle{
 };
 
 // A structure to store the complete gravitational system
-struct NBodySystem
-{
+struct NBodySystem {
 	std::vector <Body> bodies;
 
 	Particle particle;
@@ -167,26 +179,25 @@ void GetChar() {
 	getchar();
 }
 
-
 /// It returns the distance between the particle and the body given by argument
 Vector3D KeplerForce( Particle p,  std::vector <Body> bodies ) {
 	Vector3D force;
-	force.Print("Init");
+	if( debug ) force.Print("Init KeplerForce");
 	int cont = 0;
 	for(  auto &b: bodies )
 	{
 		cont++;
 		double r3 = pow( p.DistanceToBodySquared( b ), 1.5 );
-		double forceX = - physics::G * b.Mass * ( p.position.X() - b.position.X() )/r3;
+		double forceX = - physics::G * b.Mass(r3) * ( p.position.X() - b.position.X() )/r3;
 		//std::cout << "Body: " << cont << " r3 : " << r3 << " Mass : " << b.Mass << " diff: " << p.position.X() - b.position.X() << " r3: " << r3 << " ForceX: " << forceX << std::endl;
 		if( debug )
 		{
-			std::cout << "Body: " << cont << " Mass : " << b.Mass << " diff: " << p.position.X() - b.position.X() << " r3: " << r3 << " ForceX: " << forceX << std::endl;
+			std::cout << "Body: " << cont << " Mass : " << b.Mass() << " diff: " << p.position.X() - b.position.X() << " r3: " << r3 << " ForceX: " << forceX << std::endl;
 		}
-		force.x -= physics::G * b.Mass * ( p.position.X() - b.position.X() )/r3;
-		force.y -= physics::G * b.Mass * ( p.position.Y() - b.position.Y() )/r3;
-		force.z -= physics::G * b.Mass * ( p.position.Z() - b.position.Z() )/r3;
-		force.Print(std::to_string(cont));
+		force.x -= physics::G * b.Mass(r3) * ( p.position.X() - b.position.X() )/r3;
+		force.y -= physics::G * b.Mass(r3) * ( p.position.Y() - b.position.Y() )/r3;
+		force.z -= physics::G * b.Mass(r3) * ( p.position.Z() - b.position.Z() )/r3;
+		if( debug) force.Print( "Force body " + std::to_string(cont));
 
 	}
 
@@ -194,54 +205,9 @@ Vector3D KeplerForce( Particle p,  std::vector <Body> bodies ) {
 	return force;
 }
 
-
-
-///// Print Methods /////
-
-/*
-void PrintBodies(  std::vector<Body> bodies ) {
-	std::cout << " = Bodies = " << std::endl;
-	std::cout << " ------------ " << std::endl;
-	int cont = 0;
-	for( auto &b : bodies )
-	{
-		b.Print( );
-		cont ++;
-	}
-	std::cout << " ------------ " << std::endl;
-}
-
-void PrintParticle(  Particle p, std::string name = "" ) {
-	std::cout << " = Particle (" << name << ") = " << std::endl;
-	std::cout << " ------------------- " << std::endl;
-	std::cout << "x: " << p.position.X() << " y: " << p.position.Y() << " z: " << p.position.Z() << std::endl;
-	std::cout << "vx: " << p.velocity.X() << " vy: " << p.velocity.Y() << " vz: " << p.velocity.Z() << std::endl;
-	std::cout << " ------------------- " << std::endl;
-}
-
-void PrintEnergies(  NBodySystem nBodySystem ) {
-	int cont = 0;
-	std::cout << " = Energies = " << std::endl;
-	std::cout << " ------------ " << std::endl;
-	for(  auto &b: nBodySystem.bodies)
-	{
-		std::cout << "Body " << cont << " energy = " << nBodySystem.particle.BodyEnergy(b) << std::endl;
-		cont++;
-	}
-	std::cout << " ------------ " << std::endl;
-}
-
-void PrintNBodySystem(  NBodySystem nBodySystem, std::string name="" ) {
-	PrintParticle( nBodySystem.particle, name );
-	PrintBodies( nBodySystem.bodies );
-	PrintEnergies( nBodySystem );
-	GetChar();
-}
-*/
-
 ///// Initialization Methods /////
-std::pair<Particle,std::vector<Body>> InitInes()
-{
+//////////////////////////////////
+std::pair<Particle,std::vector<Body>> InitInes() {
 	Particle particle;
 	std::vector <Body> bodies;
 
@@ -255,7 +221,7 @@ std::pair<Particle,std::vector<Body>> InitInes()
 	b.velocity.x = 0;
 	b.velocity.y = 0;
 	b.velocity.z = 0;
-	b.Mass = 1;
+	b.M = 1;
 
 	bodies.push_back( b );
 
@@ -264,6 +230,35 @@ std::pair<Particle,std::vector<Body>> InitInes()
 	
 	/// Velocity at the synodic system
 	particle.velocity.y = 2;
+
+	return {particle,bodies};
+}
+
+std::pair<Particle,std::vector<Body>> InitKKAxions() {
+	Particle particle;
+	std::vector <Body> bodies;
+
+	Body b;
+
+	b.position.x = 0;
+	b.position.y = 0;
+	b.position.z = 0;
+
+	/// Velocity at the synodic system
+	b.velocity.x = 0;
+	b.velocity.y = 0;
+	b.velocity.z = 0;
+	b.M = 1;
+	b.R = 1; // Size of the Sun in solar radii
+
+	bodies.push_back( b );
+
+	// We assign the particle (inside the Sun)
+	particle.position.x = 0.4;
+	particle.position.y = -0.3;
+	
+	particle.velocity.x = 1.2;
+	particle.velocity.y = 0.1;
 
 	return {particle,bodies};
 }
@@ -294,9 +289,9 @@ std::pair<Particle,std::vector<Body>> InitAraujo( std::vector<double> params ) {
 
 	/// Velocity at the synodic system
 	b.velocity.x = 0;
-	b.velocity.y = 0;
+	b.velocity.y = -mu2;
 	b.velocity.z = 0;
-	b.Mass = M1;
+	b.M = M1;
 
 	bodies.push_back( b );
 
@@ -308,14 +303,68 @@ std::pair<Particle,std::vector<Body>> InitAraujo( std::vector<double> params ) {
 	b.velocity.x = 0;
 	b.velocity.y = 0;
 	b.velocity.z = 0;
-	b.Mass = M2;
+	b.M = M2;
 
 	bodies.push_back( b );
 
 	// We assign the particle
 	particle.position.x = mu1 + d;
 	
+	/// Velocity at the synodic system (relative to body 2)
+	particle.velocity.y = v - d;
+
+	return {particle, bodies};
+}
+
+std::pair<Particle,std::vector<Body>> InitAraujoModified( std::vector<double> params ) {
+	Particle particle;
+	std::vector <Body> bodies;
+
+	if( params.size() != 4 )
+	{
+		std::cout << "Error. Araujo. It requires 4 parameters (M2,v,d,CentralMass)" << std::endl;
+		return {particle,bodies};
+	}
+
+	double M1 = 1 - params[0];
+	double M2 = params[0];
+	double v = params[1];
+	double d = params[2];
+	double CentralMass = params[3];
+
+	double mu1 = M1/(M1+M2);
+	double mu2 = M2/(M1+M2);
+
+	Body b;
+
+	b.position.x = -mu2;
+	b.position.y = 0;
+	b.position.z = 0;
+
 	/// Velocity at the synodic system
+	b.velocity.x = 0;
+	b.velocity.y = -mu2;
+	b.velocity.z = 0;
+	b.M = CentralMass;
+
+	bodies.push_back( b );
+
+	b.position.x = mu1;
+	b.position.y = 0;
+	b.position.z = 0;
+	
+	/// Velocity at the synodic system
+	b.velocity.x = 0;
+	b.velocity.y = 0;
+	b.velocity.z = 0;
+	b.M = M2;
+
+	bodies.push_back( b );
+
+	// We assign the particle
+	particle.position.x = mu1 + d;
+	
+	/// Velocity at the synodic system (relative to body 2)
 	particle.velocity.y = v - d;
 
 	return {particle, bodies};
@@ -328,10 +377,16 @@ std::pair<Particle,std::vector<Body>> InitializeSystem(std::string config, std::
 	if( config == "Araujo" )
 		system = InitAraujo(params);
 
+	if( config == "AraujoModified" )
+		system = InitAraujoModified(params);
+
 	if( config == "Ines" )
 		system = InitInes();
 
-	if( true )
+	if( config == "KKaxions" )
+		system = InitKKAxions();
+
+	if( info )
 	{
 		system.first.Print("Init");
 		for( const auto &b : system.second )
@@ -341,6 +396,8 @@ std::pair<Particle,std::vector<Body>> InitializeSystem(std::string config, std::
 	return system;
 }
 
+///// Integration Methods /////
+///////////////////////////////
 void RK4( Particle &particle,  std::vector <Body> &bodies, double h = 0.01){
 
 	// Initial values
@@ -422,8 +479,9 @@ void RK4( Particle &particle,  std::vector <Body> &bodies, double h = 0.01){
 	particle.velocity = initialParticle.velocity + (l1 + 2.0 * l2 + 2.0 * l3 + l4) / 6.0;
 }
 
-void WriteParticle( std::ofstream &ofile, double t, const Particle &p, const std::vector <Body> bodies )
-{
+///// Output method /////
+/////////////////////////
+void WriteParticle( std::ofstream &ofile, double t, const Particle &p, const std::vector <Body> bodies ) {
 	ofile << t << "\t" <<  p.position.X() << "\t" << p.position.Y() << "\t" << p.position.Z() << "\t" << p.velocity.X() << "\t" << p.velocity.Y() << "\t" << p.velocity.Z();
 
 	for( const auto &b: bodies)
@@ -437,13 +495,40 @@ void WriteParticle( std::ofstream &ofile, double t, const Particle &p, const std
 	ofile << "\n";
 }
 
+///// Display help method /////
+///////////////////////////////
 void displayHelp(const char* programName) {
 	std::cout << "Usage: " << programName << " [options]" << std::endl;
 	std::cout << "Options:" << std::endl;
 	std::cout << "  --output <output_filename>: Set the output filename (default: out.txt)" << std::endl;
 	std::cout << "  --system <system_name>: Set the system name (default: Araujo)" << std::endl;
 	std::cout << "  --params <param1,param2,...>: Set the parameters as a comma-separated list of values" << std::endl;
+	std::cout << "  --steps <N>: Set the number of iterations (Default 2000)" << std::endl;
 	std::cout << "  --help: Display this help message" << std::endl;
+}
+
+void WriteOrbit( std::pair<Particle, std::vector<Body>> nBodySystem, std::string outfname, int steps )
+{
+	Particle particle = nBodySystem.first;
+	std::vector <Body> bodies = nBodySystem.second;
+
+	std::ofstream outputFile( outfname, std::ofstream::out ); // Open file for appending
+
+	double deltaT = DT;
+	double t = 0;
+	WriteParticle( outputFile, t, particle, bodies );
+
+	int cont = 0;
+	while ( cont < steps )
+	{
+		RK4 ( particle, bodies, deltaT );
+		/* if( debug ) { PrintNBodySystem( nBodySystem ); } */
+		WriteParticle( outputFile, t, particle, bodies );
+
+		t += deltaT;
+		cont++;
+	}
+	outputFile.close();
 }
 
 //// It stars the main program ////
@@ -453,6 +538,7 @@ int main(int argc, char* argv[]) {
 	std::string systemName = "Araujo";
 	// M2, v, d
 	std::vector<double> params = { 1.e-7, 0.005, 0.00287};
+	int steps = (int) (2./DT);
 
 	// Parse command-line arguments
 	for (int i = 1; i < argc; ++i) {
@@ -468,6 +554,14 @@ int main(int argc, char* argv[]) {
 		} else if (arg == "--system") {
 			if (i + 1 < argc) {
 				systemName = argv[i + 1];
+				++i;  // skip the next argument
+			} else {
+				std::cerr << "--system option requires one argument." << std::endl;
+				return 1;
+			}
+		} else if (arg == "--steps") {
+			if (i + 1 < argc) {
+				steps = std::stoi(argv[i + 1]);
 				++i;  // skip the next argument
 			} else {
 				std::cerr << "--system option requires one argument." << std::endl;
@@ -517,22 +611,7 @@ int main(int argc, char* argv[]) {
 		return 1; // indicating an error
 	}
 
-	std::pair<Particle, std::vector<Body>> nBodySystem = InitializeSystem(systemName, params);
-	Particle particle = nBodySystem.first;
-	std::vector <Body> bodies = nBodySystem.second;
-
-	std::ofstream outputFile( outputFilename, std::ofstream::out ); // Open file for appending
-
-	double deltaT = 0.01;
-	double t = 0;
-	WriteParticle( outputFile, t, particle, bodies );
-
-	while ( t < 1.25 * 2 * M_PI )
-	{
-		t += deltaT;
-		RK4 ( particle, bodies, deltaT );
-		/* if( debug ) { PrintNBodySystem( nBodySystem ); } */
-		WriteParticle( outputFile, t, particle, bodies );
-	}
-	outputFile.close();
+	std::pair<Particle, std::vector<Body>> nBodySystem = InitializeSystem(systemName, params );
+	WriteOrbit( nBodySystem, outputFilename, steps );
 }
+
