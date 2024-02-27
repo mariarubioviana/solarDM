@@ -2,526 +2,616 @@
 #include <math.h>
 #include<stdio.h>
 #include<stdlib.h>
+#include <fstream> 
 #include <vector>
+#include <string>
+#include <sstream>
 
+bool debug = false;
+bool info = true;
+double DT = 0.001; // differential step
 
-const double H0 = -0.5; // Energía inicial, en teoría debería conservarse
-const double phi1 = 0;  // ángulo phi*
-const double e = 0.6; //excentricidad
-
-//funciones
-
-
-float f_Kepler(float a, float b){  //Ecuacion diferencial de la aceleración 2.2
-float f, g;
-g=pow((a*a+b*b),1.5);
-f= -a/g;
-return f;
-}
-
-float velocidad(float tiempo, float a, float b){
-float v;
-v= tiempo*f_Kepler(a,b);
-return v;
-}
-
-float Energia(float x,float y,float vx,float vy){
-    float E;
-    E= 0.5*(vx*vx + vy*vy) - 1/(sqrt(x*x + y*y));
-
-return E;
-}
-
-void EulerExplicito(int pasos, float h);
-void ImpMidpoint(int pasos, float h);
-void Verlet(int pasos, float h);
-void SympcEuler(int pasos, float h);
-void printEexplicito(float x[], float y[],float ener[], float err[], int pasos);
-void printEsymp(float x[], float y[],float ener[],float err[], int pasos);
-void printMidpoint(std::vector <float> x, std::vector<float> y, std::vector<float> en, std::vector<float> err);
-void printVerlet(float x[], float y[],float ener[],float err[], int pasos);
-float Calcerror(float x, float y); ///El valor de d hay que ponerlo a mano
-void CalculoAnalitico(int pasos);
-
-void RK4(float pasos, float h);
-// Es mejor omitir, para tener claro los miembros que vienen de std::
-//using namespace std;
-
-bool doVerlet = true;
-bool doMidPoint = false;
-bool doSymplectic = false;
-bool doRK4 =true;
-int main()
+namespace physics
 {
+	 double G = 1;
+	 double H0 = -0.5;
+	 double phi1 = 0;
+	 double e = 0.6;
+};
 
-    //definición de d y L0
-    float d = 1.0 - e*e;
-    float L0 = sqrt(d);
+//// Vector3D class definition and operations
+class Vector3D {
+	public:
+	double x = 0,y = 0,z = 0;
+	Vector3D(double a = 0, double b = 0, double c = 0)  : x(a), y(b), z(c) { }
+	double  X() const { return x; }
+	double  Y() const { return y; }
+	double  Z() const { return z; }
 
-    printf("Parametros del sistema: H0 = %f  e = %f L0 = %f d = %f\n",H0,e, L0, d);
-    puts("Pulsa Intro para continuar ... ");
-    getchar();
+	void Print( std::string name = "" ) 
+	{
+		std::cout << "Vector3D=" << name << "("<<X()<<","<<Y()<<","<<Z()<<")" << std::endl;
+	}
 
-    // crear array de los pasos temporales para distintos métodos
+	/// Operators
+	Vector3D& operator += (const Vector3D & b)  {
+		x += b.X(); y += b.Y(); z += b.Z();
+		return *this;
+	}
 
-    float h[4];
-    int steps[4];
-    h[0]= 0.0005;
-    steps[0]=400000 ;//euler explicito
-    h[1]=0.01;
-    steps[1]=40000; //symplectic Euler, implicit midpoint, Verlet
+	Vector3D& operator -= (const Vector3D & b)  {
+		x -= b.X(); y -= b.Y(); z -= b.Z();
+		return *this;
+	}
 
+	Vector3D& operator *= (const double & b)  {
+		x = b*X(); y = b*Y(); z = b*Z();
+		return *this;
+	}
+	
+	Vector3D& operator /= (const double & b)  {
+		x = b/X(); y = b/Y(); z = b/Z();
+		return *this;
+	}
+};
 
-    ///SOLUCION ANALITICA (sale)
-    //CalculoAnalitico(steps[1]);
-    puts("Calculo analitico acabado ... ");
-
-    ///EULER EXPLÍCITO (sale)
-    //EulerExplicito(steps[0], h[0]);
-    // puts("Metodo Euler explicito acabado ... ");
-    //getchar();
-
-    ///VERLET (sale)
-    if( doVerlet )
-    {
-        Verlet(steps[1],h[1]);
-        puts("Metodo de Verlet acabado ... ");
-        getchar();
-    }
-
-    ///IMPLICIT MIDPOINT
-    if( doMidPoint )
-    {
-        ImpMidpoint(steps[1], h[1]);
-        puts("Metodo implicit midpoint acabado ... ");
-        getchar();
-    }
-
-    ///SYMPLECTIC EULER (sale)
-    if( doSymplectic )
-    {
-        SympcEuler(steps[1],h[1]);
-        puts("Metodo symplectic Euler acabado ... ");
-        getchar();
-    }
-
-    ///RK4
-    if( doRK4 )
-    {
-    RK4(steps[1],h[1]);
-        puts("Metodo RK4 acabado ... ");
-        getchar();
-    }
-
-
-    return 0;
+Vector3D operator + (const Vector3D & a, const Vector3D & b)  {
+	    return Vector3D(a) += b;
 }
 
-
-void EulerExplicito(int pasos, float h){
-
-
-// ---> No es necesario definir el numero de pasos cuando se usa std::vector
-float x[pasos];
-float y[pasos];
-float vx[pasos];
-float vy[pasos];
-float energ[pasos];
-float err[pasos];
-
-// ---> tampoco inicializar, puesto que el vector estara vacio
-for (int i=0; i<pasos; i++){  //inicializar vectores
-   x[i]=0;
-   y[i]=0;
-   vx[i]=0;
-   vy[i]=0;
-   energ[i]=0;
-   err[i]=0;
+Vector3D operator - (const Vector3D & a, const Vector3D & b)  {
+	    return Vector3D(a) -= b;
 }
 
-// Habria que usar esto, y push_back
-// std::vector <float> x,y,vx,vy,energ,err;
-
-x[0]= 1-e;
-y[0]=0;
-vx[0]=0;
-vy[0]=sqrt((1.0 +e)/(1.0 -e));
-
-energ[0]=Energia(x[0],y[0],vx[0],vy[0]);
-
-x[1]= x[0] + h*vx[0];
-y[1]= y[0] + h*vy[0];
-
-printf("ha entrado");
-
-
-for(int i=1; i<pasos-1; i++){
-vx[i]= vx[i-1] + h*f_Kepler(x[i-1],y[i-1]); //ojo con el orden al usar f_Kepler
-vy[i]=vy[i-1] + h*f_Kepler(y[i-1],x[i-1]);
-
-x[i+1]= x[i] + h*vx[i];
-y[i+1]= y[i] + h*vy[i];
-
-energ[i]=Energia(x[i],y[i],vx[i],vy[i]);
-err[i]=fabs(-0.5 - energ[i])/(float)energ[i];
-
-printf("Paso %d. X=%f  Y= %f Energia=%f\n", i, x[i], y[i], energ[i]);
-
+Vector3D operator * ( const double& a, const Vector3D & b)  {
+	    return Vector3D( a*b.X(), a*b.Y(), a*b.Z());
 }
 
-printEexplicito(x,y,energ,err,pasos);
+Vector3D operator * (const Vector3D & b, const double& a )  {
+	    return Vector3D( a*b.X(), a*b.Y(), a*b.Z());
 }
 
-void Verlet(int pasos, float h){
-
-float x[pasos];
-float y[pasos];
-float vx[pasos];
-float vxm[pasos];
-float vy[pasos];
-float vym[pasos];
-float energ[pasos];
-float err[pasos];
-
-for (int i=1; i<pasos; i++){  //inicializar vectores
-   vx[i]=0;
-   vxm[i]=0;
-   vy[i]=0;
-   vym[i]=0;
-   x[i]=0;
-   y[i]=0;
-   energ[i]=0;
-   err[i]=0;
-
+Vector3D operator / ( const Vector3D & b, const double& a ) {
+	    return Vector3D( b.X()/a, b.Y()/a, b.Z()/a);
 }
 
-x[0]= 1-e;
-y[0]=0;
-vx[0]=0;
-vy[0]=sqrt((1.0 +e)/(1.0 -e));
-energ[0]=-0.5;
+// Body structure to store the coordinates and mass
+struct Body{
+	Vector3D position;
+	Vector3D velocity;
 
-printf("Valor de h %f \n", h);
-//dadas las condiciones iniciales, hay que calcular vm en el punto inicial, para asi poder calcular
-//x_i+1 (o y_i+1), pero a la vez, para cañcular vm necesitamos usar h/2 y los puntos x_0, y_0.
+	double M = 0;
+	double R = 0;
 
-for(int i =0; i<(pasos-1);i++){
-vxm[i]  = vx[i]+h*0.5*f_Kepler(x[i],y[i]);
-vym[i]  = vy[i]+h*0.5*f_Kepler(y[i],x[i]);
+	double Mass( double r3 = 0 ) const
+	{
+		if( r3 < R )
+		{
+			return M * r3/R/R/R;
+		}
+		else
+			return M;
+	}
+
+	void Print( std::string name = "" ) const {
+		std::cout << " = Body (" << name << ") = " << std::endl;
+		std::cout << " ------------------- " << std::endl;
+		std::cout << "Mass: " << M << " Radius: " << R << " X: " << position.X() << " Y: " << position.Y() << " Z: " << position.Z() << std::endl;
+		std::cout << "vX: " << velocity.X() << " vY: " << velocity.Y() << " vZ: " << velocity.Z() << std::endl;
+	}
+};
+
+/// Particle structure to store each point of a given orbit
+struct Particle{
+	Vector3D position;
+	Vector3D velocity;
+
+	/// Returns the squared velocity of the particle
+	inline double VelocitySquared( )
+	{
+		return (velocity.X()*velocity.X() + velocity.Y()*velocity.Y() + velocity.Z()*velocity.Z());
+	}
+
+	/// Returns the distance squared between the particle and the origin
+	inline double DistanceToCenterSquared( )
+	{
+		return (position.X()*position.X() + position.Y()*position.Y() + position.Z()*position.Z());
+	}
+	
+	/// It returns the distance between the particle and the body given by argument
+	inline double DistanceToBodySquared( const Body &b ) const {
+		double dx = position.X() - b.position.X();
+		double dy = position.Y() - b.position.Y();
+		double dz = position.Z() - b.position.Z();
+
+		return (dx*dx + dy*dy + dz*dz);
+	}
+
+	/// It returns the potential energy of the particle respect to a given body
+	double PotentialEnergy( const Body &body) const {
+		double r = sqrt(DistanceToBodySquared( body));
+		return -physics::G * body.Mass(r*r*r) / r;
+	}
+
+	/// It returns the kinetic energy of the particle respect to a given body
+	double KineticEnergy( const Body &body) const {
+		return 0.5 * (pow(velocity.X()-body.velocity.X(), 2) + pow(velocity.Y()-body.velocity.Y(), 2) + pow(velocity.Z()-body.velocity.Z(), 2));
+	}
+	
+	/// It returns the total energy, kinetic energy is calculated respect to a given body (given by n)
+	double TotalEnergy(  const std::vector <Body> &bodies, int n = 0 ) { 
+		if( bodies.size() == 0 ) return 0;
+
+		double totalU = 0.0;  // Total potential energy
+		for ( auto& body : bodies)
+			totalU += PotentialEnergy( body);
+
+		double totalK = KineticEnergy( bodies[n]);
+		return totalU + totalK;
+	}
+
+	double BodyEnergy( const Body &body ) const { 
+		double totalU = PotentialEnergy( body);  // Total potential energy
+		double totalK = KineticEnergy( body);
+		return totalU + totalK;
+	}
+
+	void Print( std::string name = "" ) {
+		std::cout << " = Particle (" << name << ") = " << std::endl;
+		std::cout << " ----------- " << std::endl;
+		std::cout << "x: " << position.X() << " y: " << position.Y() << " z: " << position.Z() << std::endl;
+		std::cout << "vx: " << velocity.X() << " vy: " << velocity.Y() << " vz: " << velocity.Z() << std::endl;
+		std::cout << " ----------- " << std::endl;
+	}
+};
+
+// A structure to store the complete gravitational system
+struct NBodySystem {
+	std::vector <Body> bodies;
+
+	Particle particle;
+};
 
 
-x[i+1]= x[i] + h*vxm[i];
-y[i+1]=y[i] + h*vym[i];
-
-vx[i+1]= vxm[i] + 0.5*h*f_Kepler(x[i+1],y[i+1]);
-vy[i+1]= vym[i] + 0.5*h*f_Kepler(y[i+1],x[i+1]);
-
-//printf("Paso %d. vmx_i = %f --> x_i+1 = %f \n vmy_i = %f --> y_i+1 = %f \n xm_i = %f --> vx_i+1= %f \n ym_i = %f --> vy_i+1 = %f \n", i, vxm[i],x[i+1], vym[i], y[i+1], xm[i], vx[i+1], ym[i], vy[i+1]);
-//getchar();
-energ[i+1]=Energia(x[i+1],y[i+1],vx[i+1],vy[i+1]);
-err[i+1]=(-0.5 - energ[i])/(-0.5);
-//printf("Paso %d \n", i);
-
+///// Helper Methods /////
+void GetChar() {
+	std::cout << "Press a key to continue ... " << std::endl;
+	getchar();
 }
 
-printVerlet(x,y,energ,err,pasos);
+/// It returns the distance between the particle and the body given by argument
+Vector3D KeplerForce( Particle p,  std::vector <Body> bodies ) {
+	Vector3D force;
+	if( debug ) force.Print("Init KeplerForce");
+	int cont = 0;
+	for(  auto &b: bodies )
+	{
+		cont++;
+		double r3 = pow( p.DistanceToBodySquared( b ), 1.5 );
+		double forceX = - physics::G * b.Mass(r3) * ( p.position.X() - b.position.X() )/r3;
+		//std::cout << "Body: " << cont << " r3 : " << r3 << " Mass : " << b.Mass << " diff: " << p.position.X() - b.position.X() << " r3: " << r3 << " ForceX: " << forceX << std::endl;
+		if( debug )
+		{
+			std::cout << "Body: " << cont << " Mass : " << b.Mass() << " diff: " << p.position.X() - b.position.X() << " r3: " << r3 << " ForceX: " << forceX << std::endl;
+		}
+		force.x -= physics::G * b.Mass(r3) * ( p.position.X() - b.position.X() )/r3;
+		force.y -= physics::G * b.Mass(r3) * ( p.position.Y() - b.position.Y() )/r3;
+		force.z -= physics::G * b.Mass(r3) * ( p.position.Z() - b.position.Z() )/r3;
+		if( debug) force.Print( "Force body " + std::to_string(cont));
+
+	}
+
+	//GetChar();
+	return force;
 }
 
+///// Initialization Methods /////
+//////////////////////////////////
+std::pair<Particle,std::vector<Body>> InitInes() {
+	Particle particle;
+	std::vector <Body> bodies;
 
+	Body b;
 
-void ImpMidpoint(int pasos, float h){
+	b.position.x = 0;
+	b.position.y = 0;
+	b.position.z = 0;
 
-    // Setting vectors and initial values
-    std::vector <float> x, y, vx, vy;
-    std::vector <float> energy, err;
+	/// Velocity at the synodic system
+	b.velocity.x = 0;
+	b.velocity.y = 0;
+	b.velocity.z = 0;
+	b.M = 1;
 
-    x.push_back(1-e);
-    y.push_back(0.01); // Por que 0.01 y no 0?
-    vx.push_back(0);
-    vy.push_back(sqrt((1.0 +e)/(1.0 -e)));
-    energy.push_back(-0.5);
-    err.push_back(0);
+	bodies.push_back( b );
 
-    for(int i=0; i<pasos-1;i++){
+	// We assign the particle
+	particle.position.x = 0.4;
+	
+	/// Velocity at the synodic system
+	particle.velocity.y = 2;
 
-        /// Getting the last vector element
-        float Xo = x.back();
-        float Yo = y.back();
-
-        float VXo = vx.back();
-        float VYo = vy.back();
-
-        float k1_vx = f_Kepler(Xo, Yo);
-        float k1_vy = f_Kepler(Yo, Xo);
-
-        float k1_x = Xo + h * (VXo + 0.5 * h * k1_vx);
-        float k1_y = Yo + h * (VYo + 0.5 * h * k1_vy);
-
-        float k2_vx = f_Kepler( k1_x, k1_y );
-        float k2_vy = f_Kepler( k1_y, k1_x );
-
-        x.push_back( Xo + h * VXo + 0.5 * h * h * k1_vx );
-        y.push_back( Yo + h * VYo + 0.5 * h * h * k1_vy );
-
-        vx.push_back( VXo + 0.5 * h * (k1_vx + k2_vx) );
-        vy.push_back( VYo + 0.5 * h * (k1_vy + k2_vy) );
-
-        energy.push_back( Energia( x.back(), y.back(), vx.back(), vy.back() ) );
-        err.push_back( Calcerror( x.back(), y.back() ) );
-
-        //printf("Paso %d. X=%f  Y= %f Energia=%f  INI X0 = %f Y0 =%f\n", i, x[i], y[i], energ[i], x[0],y[0]);
-        //getchar();
-    }
-
-    FILE *f3 = fopen("Midpoint1.txt", "w");
-    if(!f3) { printf("Error al abrir el archivo de texto."); exit(1); }
-
-    for(unsigned int i=0; i < x.size(); i++)
-        fprintf(f3,"%f   %f    %f   %f   %f\n", 0.05 * (float) i, x[i], y[i], energy[i], err[i]);
-    fclose(f3);
+	return {particle,bodies};
 }
 
+std::pair<Particle,std::vector<Body>> InitKKAxions() {
+	Particle particle;
+	std::vector <Body> bodies;
 
-//imprimir archivos de texto con las coordenadas x,y en los distintos pasos de tiempo, y también la energía
-void SympcEuler(int pasos, float h){
+	Body b;
 
-float x[pasos];
-float y[pasos];
-float vx[pasos];
-float vy[pasos];
-float energ[pasos];
-float err[pasos];
+	b.position.x = 0;
+	b.position.y = 0;
+	b.position.z = 0;
 
-for (int i=0; i<pasos; i++){  //inicializar vectores
-   x[i]=0;
-   y[i]=0;
-   vx[i]=0;
-   vy[i]=0;
-   energ[i]=0;
-   err[i]=0;
+	/// Velocity at the synodic system
+	b.velocity.x = 0;
+	b.velocity.y = 0;
+	b.velocity.z = 0;
+	b.M = 1;
+	b.R = 1; // Size of the Sun in solar radii
+
+	bodies.push_back( b );
+
+	// We assign the particle (inside the Sun)
+	particle.position.x = 0.4;
+	particle.position.y = -0.3;
+	
+	particle.velocity.x = 1.2;
+	particle.velocity.y = 0.1;
+
+	return {particle,bodies};
 }
 
-x[0]= 1-e;
-y[0]=0;
-vx[0]=0;
-vy[0]=sqrt((1.0 +e)/(1.0 -e));
+std::pair<Particle,std::vector<Body>> InitAraujo( std::vector<double> params ) {
+	Particle particle;
+	std::vector <Body> bodies;
 
-energ[0]=Energia(x[0],y[0],vx[0],vy[0]);
+	if( params.size() != 3 )
+	{
+		std::cout << "Error. Araujo. It requires 3 parameters (M2,v,d)" << std::endl;
+		return {particle,bodies};
+	}
 
-for(int i=0; i<pasos-1; i++){  //x explícita e y implícita
+	double M1 = 1 - params[0];
+	double M2 = params[0];
+	double v = params[1];
+	double d = params[2];
 
-x[i+1]=x[i]+h*vx[i]; //exp
-y[i+1]=y[i]+h*vy[i]; //imp
+	double mu1 = M1/(M1+M2);
+	double mu2 = M2/(M1+M2);
 
-vx[i+1]=vx[i]+h*f_Kepler(x[i+1],y[i+1]);
-vy[i+1]=vy[i]+h*f_Kepler(y[i+1],x[i+1]);
+	Body b;
 
+	b.position.x = -mu2;
+	b.position.y = 0;
+	b.position.z = 0;
 
+	/// Velocity at the synodic system
+	b.velocity.x = 0;
+	b.velocity.y = -mu2;
+	b.velocity.z = 0;
+	b.M = M1;
 
+	bodies.push_back( b );
 
-energ[i]=Energia(x[i],y[i],vx[i],vy[i]);
-err[i]=-(-0.5 - energ[i])/(-0.5);
+	b.position.x = mu1;
+	b.position.y = 0;
+	b.position.z = 0;
+	
+	/// Velocity at the synodic system
+	b.velocity.x = 0;
+	b.velocity.y = 0;
+	b.velocity.z = 0;
+	b.M = M2;
 
-//printf("Paso %d. X=%f  Y= %f Energia=%f  INI X0 = %f Y0 =%f\n", i, x[i], y[i], energ[i], x[0],y[0]);
+	bodies.push_back( b );
 
-}
-printf("Valores iniciales X = %f Y = %f", x[0],y[0]);
-printEsymp(x,y,energ,err,pasos);
+	// We assign the particle
+	particle.position.x = mu1 + d;
+	
+	/// Velocity at the synodic system (relative to body 2)
+	particle.velocity.y = v - d;
 
-}
-
-
-
-void RK4(float pasos, float h){
-
-std::vector <float> x, y, vx, vy;
-    std::vector <float> energy, err;
-
-    x.push_back(0.4);
-    y.push_back(0.0);
-    vx.push_back(0);
-    vy.push_back(2);
-    energy.push_back(-0.5);
-    err.push_back(0.0);
-
- for(int i=0; i<pasos-1;i++){
-
-        /// Getting the last vector element
-        float Xo = x.back();
-        float Yo = y.back();
-
-        float VXo = vx.back();
-        float VYo = vy.back();
-
-        //printf( "xo = %f,  vx0 = %f, y0 = %f, vy0 = %f \n", Xo, VXo, Yo, VYo);
-
-        float k1_vx = f_Kepler(Xo, Yo);
-        float k1_vy = f_Kepler(Yo, Xo);
-
-        float k1_x = VXo;
-        float k1_y = VYo;
-
-
-        //printf( "VX k1 = %f, VY k1 = %f \n", k1_vx,k1_vy);
-
-
-        float k2_vx = f_Kepler(Xo + 0.5 * h * k1_x, Yo + 0.5 * h * k1_y );
-        float k2_vy = f_Kepler(Yo + 0.5 * h * k1_y, Xo + 0.5 * h * k1_x );
-
-        float k2_x = VXo + h * 0.5 * k1_vx;
-        float k2_y = VYo + h * 0.5 * k1_vy;
-
-
-          //printf( "VX k2 = %f, VY k2 = %f \n", k2_vx,k2_vy);
-
-        float k3_vx = f_Kepler(Xo + 0.5 * h * k2_x, Yo + 0.5 * h * k2_y );
-        float k3_vy = f_Kepler(Yo + 0.5 * h * k2_y, Xo + 0.5 * h * k2_x );
-
-        float k3_x = VXo + h * 0.5 * k2_vx;
-        float k3_y = VYo + h * 0.5 * k2_vy;
-
-         // printf( "VX k3 = %f, VY k3 = %f \n", k3_vx,k3_vy);
-
-        float k4_vx = f_Kepler(Xo + h * k3_x, Yo + h * k3_y );
-        float k4_vy = f_Kepler(Yo + h * k3_y, Xo + h * k3_x );
-
-        float k4_x = VXo + h * k3_vx;
-        float k4_y = VYo + h * k3_vy;
-
-          //printf( "VX k4 = %f, VY k4 = %f \n", k4_vx,k4_vy);
-
-
-        vx.push_back( VXo + h * (k1_vx + 2.0 * k2_vx + 2.0 * k3_vx + k4_vx) * 0.1666666 );
-        vy.push_back( VYo + h * (k1_vy + 2.0 * k2_vy + 2.0 * k3_vy + k4_vy) * 0.1666666 );
-
-
-        x.push_back( Xo +  h * (k1_x + 2.0 * k2_x + 2.0 * k3_x + k4_x) * 0.1666666 );
-        y.push_back( Yo +  h * (k1_y + 2.0 * k2_y + 2.0 * k3_y + k4_y) * 0.1666666 );
-
-
-
-        energy.push_back( Energia( x.back(), y.back(), vx.back(), vy.back() ) );
-        err.push_back(-(-0.5 - energy[i])/(-0.5));
-
-        //printf("Paso %d. X=%f  Y= %f Energia=%f  VEL VX = %f VY =%f\n", i, x[i], y[i], energy[i], vx[i],vy[i]);
-       // getchar();
-    }
-
-    printf("X=%f Y =%f VX=%f VY=%f", x[pasos-1], y[pasos-1], vx[pasos-1],vy[pasos-1]);
-    FILE *f5 = fopen("RK4_prueba.txt", "w");
-    if(!f5) { printf("Error al abrir el archivo de texto."); exit(1); }
-
-    for(unsigned int i=0; i < x.size(); i++)
-        fprintf(f5,"%f   %f    %f   %f   %f\n", 0.01 * (float) i, x[i], y[i], energy[i], err[i]);
-    fclose(f5);
+	return {particle, bodies};
 }
 
+std::pair<Particle,std::vector<Body>> InitAraujoModified( std::vector<double> params ) {
+	Particle particle;
+	std::vector <Body> bodies;
 
+	if( params.size() != 4 )
+	{
+		std::cout << "Error. Araujo. It requires 4 parameters (M2,v,d,CentralMass)" << std::endl;
+		return {particle,bodies};
+	}
 
+	double M1 = 1 - params[0];
+	double M2 = params[0];
+	double v = params[1];
+	double d = params[2];
+	double CentralMass = params[3];
 
+	double mu1 = M1/(M1+M2);
+	double mu2 = M2/(M1+M2);
 
+	Body b;
 
+	b.position.x = -mu2;
+	b.position.y = 0;
+	b.position.z = 0;
 
-void printEexplicito(float x[], float y[],float ener[],float err[], int pasos){
-    float aux;
-FILE *f1;
- f1=fopen("Euler_explicito.txt", "w");
-	if(f1==NULL){printf("Error al abrir el archivo de texto.");exit(1);	}
+	/// Velocity at the synodic system
+	b.velocity.x = 0;
+	b.velocity.y = -mu2;
+	b.velocity.z = 0;
+	b.M = CentralMass;
 
-    for(int i=0;i<pasos;i++){
-            aux=i*0.05;
+	bodies.push_back( b );
 
-            fprintf(f1,"%f   %f    %f   %f   %f\n",aux,x[i],y[i],ener[i], err[i]);
-    }
-    fclose(f1);
+	b.position.x = mu1;
+	b.position.y = 0;
+	b.position.z = 0;
+	
+	/// Velocity at the synodic system
+	b.velocity.x = 0;
+	b.velocity.y = 0;
+	b.velocity.z = 0;
+	b.M = M2;
 
+	bodies.push_back( b );
 
+	// We assign the particle
+	particle.position.x = mu1 + d;
+	
+	/// Velocity at the synodic system (relative to body 2)
+	particle.velocity.y = v - d;
 
+	return {particle, bodies};
 }
 
-void printEsymp(float x[], float y[],float ener[],float err[], int pasos){
-    float aux;
-FILE *f2;
- f2=fopen("Euler_symp_0001.txt", "w");
-	if(f2==NULL){printf("Error al abrir el archivo de texto.");exit(1);	}
+std::pair<Particle,std::vector<Body>> InitializeSystem(std::string config, std::vector <double> params = {}) {
+	
+	std::pair<Particle, std::vector<Body>> system = InitInes();
 
-    for(int i=0;i<pasos;i++){
-            aux=i*0.001;
-            fprintf(f2,"%f   %f    %f   %f   %f\n",aux,x[i],y[i],ener[i], err[i]);
+	if( config == "Araujo" )
+		system = InitAraujo(params);
 
-    }
-    fclose(f2);
+	if( config == "AraujoModified" )
+		system = InitAraujoModified(params);
 
+	if( config == "Ines" )
+		system = InitInes();
 
+	if( config == "KKaxions" )
+		system = InitKKAxions();
+
+	if( info )
+	{
+		system.first.Print("Init");
+		for( const auto &b : system.second )
+			b.Print();
+	}
+
+	return system;
 }
 
+///// Integration Methods /////
+///////////////////////////////
+void RK4( Particle &particle,  std::vector <Body> &bodies, double h = 0.01){
 
+	// Initial values
+	Particle initialParticle = particle;
 
+	// k1, l1
+	Vector3D k1 = h * initialParticle.velocity;
+	Vector3D l1 = h * KeplerForce(particle, bodies);
 
-void printVerlet(float x[], float y[],float ener[],float err[], int pasos){
-    float aux;
-FILE *f4;
- f4=fopen("Verlet_prueba.txt", "w");
-	if(f4==NULL){printf("Error al abrir el archivo de texto.");exit(1);	}
+	if( debug )
+	{
+		k1.Print("k1");
+		l1.Print("l1");
+	}
 
-    for(int i=0;i<pasos;i++){
-             aux=i*0.01;
-            fprintf(f4,"%f   %f    %f   %f   %f\n",aux,x[i],y[i],ener[i], err[i]);
-    }
-    fclose(f4);
+	// k2
+	Particle k2particle;
+	if( debug )
+	{
+		k2particle.Print("k2");
+		KeplerForce( particle, bodies).Print("ForceInitial");
+		initialParticle.Print("initial");
+	}
+
+	k2particle.position = initialParticle.position + k1/2.;
+	k2particle.velocity = initialParticle.velocity + l1/2.;
+	if( debug )
+	{
+		k2particle.Print("k2particle");
+	}
+
+	Vector3D k2 = h * k2particle.velocity;
+	Vector3D l2 = h * KeplerForce( k2particle, bodies);
+	if( debug )
+	{
+		k2.Print("k2");
+		l2.Print("l2");
+		KeplerForce( k2particle, bodies).Print("ForceK2");
+	}
+
+	// k3
+	Particle k3particle;
+	k3particle.position = initialParticle.position + k2/2.;
+	k3particle.velocity = initialParticle.velocity + l2/2.;
+	if( debug )
+	{
+		k3particle.Print("k3");
+	}
+
+	Vector3D k3 = h * k3particle.velocity;
+	Vector3D l3 = h * KeplerForce( k3particle, bodies);
+	if( debug )
+	{
+		KeplerForce( k3particle, bodies).Print("ForceK3");
+		k3.Print("k3");
+		l3.Print("l3");
+	}
+
+	// k3
+	Particle k4particle;
+	k4particle.position = initialParticle.position + k3;
+	k4particle.velocity = initialParticle.velocity + l3;
+	if( debug )
+	{
+		k4particle.Print("k4");
+	}
+
+	Vector3D k4 = h * k4particle.velocity;
+	Vector3D l4 = h * KeplerForce( k4particle, bodies);
+	if( debug )
+	{
+		k4.Print("k4");
+		l4.Print("l4");
+		KeplerForce( k4particle, bodies).Print("ForceK4");
+	}
+
+	// Update position and velocity
+	particle.position = initialParticle.position + (k1 + 2.0 * k2 + 2.0 * k3 + k4) / 6.0;
+	particle.velocity = initialParticle.velocity + (l1 + 2.0 * l2 + 2.0 * l3 + l4) / 6.0;
 }
 
+///// Output method /////
+/////////////////////////
+void WriteParticle( std::ofstream &ofile, double t, const Particle &p, const std::vector <Body> bodies ) {
+	ofile << t << "\t" <<  p.position.X() << "\t" << p.position.Y() << "\t" << p.position.Z() << "\t" << p.velocity.X() << "\t" << p.velocity.Y() << "\t" << p.velocity.Z();
 
-float Calcerror(float x, float y){
-float phi,r,r_teo,err,d;
-float pi;
-pi=4*atan(1.0);
-d=1-e*e;
-if(x>0 && y>=0) phi=(float)atan(y/x);
-if(x==0 && y>0) phi=0.5*pi;
-if(x>0 && y <0) phi=(float)atan(y/x) + 2*pi;
-if(x<0) phi=(float)atan(y/x) + pi;
-if(x==0 && y<0) phi=1.5*pi;
+	for( const auto &b: bodies)
+		ofile << "\t" << p.BodyEnergy(b);
+	
+	/*
+	for( const auto &b: bodies)
+		ofile << "\t" << p.DistanceToBodySquared( b);
+		*/
 
-r=sqrt(x*x+y*y);
-r_teo= (d)/(1.0+e*(float)cos(phi));
-
-err=(r_teo-r)*(r_teo - r);
-return err;
-
+	ofile << "\n";
 }
 
-void CalculoAnalitico(int pasos){
-    float pi;
-pi=4*atan(1.0);
-float delta=(2*pi)/(float)pasos;
-//printf("delta %f \n", delta);
-float d=1-e*e;
-float x[pasos];
-float y[pasos];
-
-float phi,r;
-phi=0;
-
-for(int i=0; i<pasos; i++){
-r= (d)/(1.0+e*(float)cos(phi));
-x[i]=r*cos(phi);
-y[i]=r*sin(phi);
-phi=phi+delta;
-//printf("Paso %d. phi = %f, r = %f,  x = %f , y= %f \n", i,phi, r, x[i],y[i]);
-//getchar();
+///// Display help method /////
+///////////////////////////////
+void displayHelp(const char* programName) {
+	std::cout << "Usage: " << programName << " [options]" << std::endl;
+	std::cout << "Options:" << std::endl;
+	std::cout << "  --output <output_filename>: Set the output filename (default: out.txt)" << std::endl;
+	std::cout << "  --system <system_name>: Set the system name (default: Araujo)" << std::endl;
+	std::cout << "  --params <param1,param2,...>: Set the parameters as a comma-separated list of values" << std::endl;
+	std::cout << "  --steps <N>: Set the number of iterations (Default 2000)" << std::endl;
+	std::cout << "  --help: Display this help message" << std::endl;
 }
 
-FILE *f5;
- f5=fopen("Analitico.txt", "w");
-	if(f5==NULL){printf("Error al abrir el archivo de texto.");exit(1);	}
+void WriteOrbit( std::pair<Particle, std::vector<Body>> nBodySystem, std::string outfname, int steps )
+{
+	Particle particle = nBodySystem.first;
+	std::vector <Body> bodies = nBodySystem.second;
 
-    for(int i=0;i<pasos;i++){
+	std::ofstream outputFile( outfname, std::ofstream::out ); // Open file for appending
 
-            fprintf(f5,"%f   %f\n",x[i],y[i]);
-    }
-    fclose(f5);
+	double deltaT = DT;
+	double t = 0;
+	WriteParticle( outputFile, t, particle, bodies );
 
+	int cont = 0;
+	while ( cont < steps )
+	{
+		RK4 ( particle, bodies, deltaT );
+		/* if( debug ) { PrintNBodySystem( nBodySystem ); } */
+		WriteParticle( outputFile, t, particle, bodies );
+
+		t += deltaT;
+		cont++;
+	}
+	outputFile.close();
 }
 
+//// It stars the main program ////
+int main(int argc, char* argv[]) {
+
+	std::string outputFilename = "out.txt";
+	std::string systemName = "Araujo";
+	// M2, v, d
+	std::vector<double> params = { 1.e-7, 0.005, 0.00287};
+	int steps = (int) (2./DT);
+
+	// Parse command-line arguments
+	for (int i = 1; i < argc; ++i) {
+		std::string arg = argv[i];
+		if (arg == "--output") {
+			if (i + 1 < argc) {
+				outputFilename = argv[i + 1];
+				++i;  // skip the next argument
+			} else {
+				std::cerr << "--output option requires one argument." << std::endl;
+				return 1;
+			}
+		} else if (arg == "--system") {
+			if (i + 1 < argc) {
+				systemName = argv[i + 1];
+				++i;  // skip the next argument
+			} else {
+				std::cerr << "--system option requires one argument." << std::endl;
+				return 1;
+			}
+		} else if (arg == "--steps") {
+			if (i + 1 < argc) {
+				steps = std::stoi(argv[i + 1]);
+				++i;  // skip the next argument
+			} else {
+				std::cerr << "--system option requires one argument." << std::endl;
+				return 1;
+			}
+		} else if (arg == "--params") {
+			if (i + 1 < argc) {
+				std::string paramsString = argv[i + 1];
+				std::istringstream iss(paramsString);
+				double param;
+				char delimiter;
+				params.clear();
+				while (iss >> param) {
+					params.push_back(param);
+					if (!(iss >> delimiter && delimiter == ',')) {
+						break;  // break if delimiter is not ','
+					}
+				}
+				++i;  // skip the next argument
+			} else {
+				std::cerr << "--params option requires one argument." << std::endl;
+				return 1;
+			}
+		}
+		else if (arg == "--help") {
+			displayHelp(argv[0]);
+			return 0;
+		}
+	}
+
+	// Now you can use the parsed arguments
+	std::cout << "Output Filename: " << outputFilename << std::endl;
+	std::cout << "System Name: " << systemName << std::endl;
+	std::cout << "Params: ";
+
+	if (params.empty()) {
+		std::cout << "{}";
+	} else {
+		for (double param : params) {
+			std::cout << param << " ";
+		}
+	}
+	std::cout << std::endl;
+
+	if (argc < 2) {
+		displayHelp(argv[0]);
+		return 1; // indicating an error
+	}
+
+	std::pair<Particle, std::vector<Body>> nBodySystem = InitializeSystem(systemName, params );
+	WriteOrbit( nBodySystem, outputFilename, steps );
+}
 
