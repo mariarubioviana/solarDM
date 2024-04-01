@@ -10,6 +10,8 @@
 bool debug = false;
 bool info = true;
 double DT = 0.001; // differential step
+std::vector<double> time;
+std::vector<double> bodyenergy;
 
 namespace physics
 {
@@ -483,9 +485,10 @@ void RK4( Particle &particle,  std::vector <Body> &bodies, double h = 0.01){
 /////////////////////////
 void WriteParticle( std::ofstream &ofile, double t, const Particle &p, const std::vector <Body> bodies ) {
 	ofile << t << "\t" <<  p.position.X() << "\t" << p.position.Y() << "\t" << p.position.Z() << "\t" << p.velocity.X() << "\t" << p.velocity.Y() << "\t" << p.velocity.Z();
-
+	time.push_back(t);
 	for( const auto &b: bodies)
 		ofile << "\t" << p.BodyEnergy(b);
+	bodyenergy.push_back(p.BodyEnergy(bodies[1]));
 	
 	/*
 	for( const auto &b: bodies)
@@ -517,18 +520,28 @@ void WriteOrbit( std::pair<Particle, std::vector<Body>> nBodySystem, std::string
 	double deltaT = DT;
 	double t = 0;
 	WriteParticle( outputFile, t, particle, bodies );
-
+	
 	int cont = 0;
 	while ( cont < steps )
 	{
 		RK4 ( particle, bodies, deltaT );
 		/* if( debug ) { PrintNBodySystem( nBodySystem ); } */
 		WriteParticle( outputFile, t, particle, bodies );
-
 		t += deltaT;
 		cont++;
 	}
 	outputFile.close();
+}
+
+double GetTransmisionTime (int steps){
+	std::ofstream archivo("tcapture.txt");
+	int cont = 0;
+	for (cont < steps)
+	{
+		if (bodyenergy[cont] >= 0) {
+			 return time[cont];
+		}
+	}
 }
 
 //// It stars the main program ////
@@ -537,8 +550,14 @@ int main(int argc, char* argv[]) {
 	std::string outputFilename = "out.txt";
 	std::string systemName = "Araujo";
 	// M2, v, d
-	std::vector<double> params = { 1.e-7, 0.005, 0.00287};
+	//std::vector<double> params = { 1.e-7, 0.005, 0.00287};
 	int steps = (int) (2./DT);
+	double M2 = 1e-5;
+	double CentralMass = 100;
+	double v = 20;
+	double dini = 0.0001;
+	double dfin = 0.1;
+	double tcapture;
 
 	// Parse command-line arguments
 	for (int i = 1; i < argc; ++i) {
@@ -611,6 +630,23 @@ int main(int argc, char* argv[]) {
 		return 1; // indicating an error
 	}
 
-	std::pair<Particle, std::vector<Body>> nBodySystem = InitializeSystem(systemName, params );
-	WriteOrbit( nBodySystem, outputFilename, steps );
+	//std::pair<Particle, std::vector<Body>> nBodySystem = InitializeSystem(systemName, params );
+	//WriteOrbit( nBodySystem, outputFilename, steps );
+	std::ofstream archivo("tcapture.txt");
+
+	for (double d = dini; d < dfin; d += 0.01){
+		std::vector<double> params = {M2, v, d, CentralMass};
+		std::pair<Particle, std::vector<Body>> nBodySystem = InitializeSystem(AraujoModified, params );
+		WriteOrbit( nBodySystem, outputFilename, steps );
+		tcapture = GetTransmisionTime(steps);
+		if (archivo.is_open()) {
+        		archivo << d << "\t" << tcapture << "\n";
+    		} 
+		else {
+       			std::cout << "No se pudo abrir el archivo." << std::endl;
+    		}
+		time.clear();
+		bodyenergy.clear();
+	}
+	archivo.close();
 }
