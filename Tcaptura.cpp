@@ -10,7 +10,7 @@
 bool debug = false;
 bool info = true;
 double DT = 0.001; // differential step
-std::vector<double> time;
+std::vector<double> times;
 std::vector<double> bodyenergy;
 
 namespace physics
@@ -485,7 +485,7 @@ void RK4( Particle &particle,  std::vector <Body> &bodies, double h = 0.01){
 /////////////////////////
 void WriteParticle( std::ofstream &ofile, double t, const Particle &p, const std::vector <Body> bodies ) {
 	ofile << t << "\t" <<  p.position.X() << "\t" << p.position.Y() << "\t" << p.position.Z() << "\t" << p.velocity.X() << "\t" << p.velocity.Y() << "\t" << p.velocity.Z();
-	time.push_back(t);
+	times.push_back(t);
 	for( const auto &b: bodies)
 		ofile << "\t" << p.BodyEnergy(b);
 	bodyenergy.push_back(p.BodyEnergy(bodies[1]));
@@ -539,7 +539,7 @@ double GetTransmisionTime (int steps){
 	for (cont < steps)
 	{
 		if (bodyenergy[cont] >= 0) {
-			 return time[cont];
+			 return times[cont];
 		}
 	}
 }
@@ -645,7 +645,7 @@ int main(int argc, char* argv[]) {
 		else {
        			std::cout << "No se pudo abrir el archivo." << std::endl;
     		}
-		time.clear();
+		times.clear();
 		bodyenergy.clear();
 	}
 	archivo.close();
