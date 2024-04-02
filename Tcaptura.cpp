@@ -536,11 +536,11 @@ void WriteOrbit( std::pair<Particle, std::vector<Body>> nBodySystem, std::string
 double GetTransmisionTime (int steps){
 	std::ofstream archivo("tcapture.txt");
 	int cont = 0;
-	for (cont < steps)
-	{
-		if (bodyenergy[cont] >= 0) {
+	while (cont < steps)
+	{	
+		cont ++;
+		if (bodyenergy[cont] >= 0)
 			 return times[cont];
-		}
 	}
 }
 
@@ -550,7 +550,7 @@ int main(int argc, char* argv[]) {
 	std::string outputFilename = "out.txt";
 	std::string systemName = "Araujo";
 	// M2, v, d
-	//std::vector<double> params = { 1.e-7, 0.005, 0.00287};
+	std::vector<double> params = { 1e-5, 20, 0.0001};
 	int steps = (int) (2./DT);
 	double M2 = 1e-5;
 	double CentralMass = 100;
@@ -636,7 +636,7 @@ int main(int argc, char* argv[]) {
 
 	for (double d = dini; d < dfin; d += 0.01){
 		std::vector<double> params = {M2, v, d, CentralMass};
-		std::pair<Particle, std::vector<Body>> nBodySystem = InitializeSystem(AraujoModified, params );
+		std::pair<Particle, std::vector<Body>> nBodySystem = InitializeSystem(InitAraujoModified, params );
 		WriteOrbit( nBodySystem, outputFilename, steps );
 		tcapture = GetTransmisionTime(steps);
 		if (archivo.is_open()) {
