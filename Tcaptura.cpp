@@ -541,9 +541,9 @@ double GetTransmisionTime (int steps){
 	{	
 		cont ++;
 		if (bodyenergy[cont] >= 0)
-			tc = times[cont];
-			 return tc;
+			return times[cont];
 	}
+	return 0;
 }
 
 //// It stars the main program ////
