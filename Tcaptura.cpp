@@ -636,7 +636,7 @@ int main(int argc, char* argv[]) {
 
 	for (double d = dini; d < dfin; d += 0.01){
 		std::vector<double> params = {M2, v, d, CentralMass};
-		std::pair<Particle, std::vector<Body>> nBodySystem = InitializeSystem(InitAraujoModified, params );
+		std::pair<Particle, std::vector<Body>> nBodySystem = InitializeSystem(systemName, params );
 		WriteOrbit( nBodySystem, outputFilename, steps );
 		tcapture = GetTransmisionTime(steps);
 		if (archivo.is_open()) {
