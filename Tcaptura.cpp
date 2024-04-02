@@ -552,11 +552,11 @@ int main(int argc, char* argv[]) {
 	std::string outputFilename = "out.txt";
 	std::string systemName = "Araujo";
 	// M2, v, d
-	std::vector<double> params = { 1.e-7, 0.005, 0.0001};
+	std::vector<double> params = { 1.e-5, 20, 0.0001};
 	int steps = (int) (2./DT);
-	double M2 = 1.e-7;
+	double M2 = 1.e-5;
 	double CentralMass = 100;
-	double v = 0.005;
+	double v = 20;
 	double dini = 0.0001;
 	double dfin = 0.1;
 	double tcapture;
