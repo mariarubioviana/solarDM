@@ -535,12 +535,14 @@ void WriteOrbit( std::pair<Particle, std::vector<Body>> nBodySystem, std::string
 
 double GetTransmisionTime (int steps){
 	std::ofstream archivo("tcapture.txt");
+	double tc;
 	int cont = 0;
 	while (cont < steps)
 	{	
 		cont ++;
 		if (bodyenergy[cont] >= 0)
-			 return times[cont];
+			tc = times[cont];
+			 return tc;
 	}
 }
 
