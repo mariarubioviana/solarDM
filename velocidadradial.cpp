@@ -112,14 +112,14 @@ struct Particle{
 		return (velocity.X()*velocity.X() + velocity.Y()*velocity.Y() + velocity.Z()*velocity.Z());
 	}
 
-  /// Returns the radial velocity of the particle
-	inline double RadialVelocity( )
+        /// Returns the radial velocity of the particle
+	double RadialVelocity( ) const
 	{
 		return (sqrt(velocity.X()*velocity.X() + velocity.Y()*velocity.Y()));
 	}
 
-  /// Returns the radial position of the particle
-	inline double RadialPosition( )
+        /// Returns the radial position of the particle
+	double RadialPosition( ) const
 	{
 		return (sqrt(position.X()*position.X() + position.Y()*position.Y()));
 	}
