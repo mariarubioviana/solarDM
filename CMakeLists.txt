@@ -4,6 +4,8 @@ project(SolarDM)  # Nombre del proyecto
 
 # Configurar el ejecutable
 add_executable(solarDM solarDM.cpp)  # Nombre del ejecutable y lista de archivos fuente
+add_executable(velocidadradial velocidadradial.cpp)  # Nombre del ejecutable y lista de archivos fuente
+add_executable(Tcaptura Tcaptura.cpp)  # Nombre del ejecutable y lista de archivos fuente
 
 # Opcional: Configurar las opciones de compilación
 set(CMAKE_CXX_STANDARD 14)  # Establecer el estándar de C++ (por ejemplo, C++11)
