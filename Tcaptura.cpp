@@ -644,7 +644,7 @@ int main(int argc, char* argv[]) {
 	std::ofstream archivo("tcapture.txt");
 
 	for (double d = dini; d < dfin; d += 0.01){
-		std::vector<double> params = {M2, v, d, CentralMass};
+		std::vector<double> params = {params[0], params[1], d, params[3]};
 		std::pair<Particle, std::vector<Body>> nBodySystem = InitializeSystem(systemName, params );
 		tcapture = GetCaptureTime( nBodySystem, outputFilename, steps );
 		//tcapture = GetCaptureTime(steps);
