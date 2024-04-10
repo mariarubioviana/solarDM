@@ -321,7 +321,9 @@ std::pair<Particle,std::vector<Body>> InitAraujo( std::vector<double> params ) {
 std::pair<Particle,std::vector<Body>> InitAraujoModified( std::vector<double> params ) {
 	Particle particle;
 	std::vector <Body> bodies;
-
+	for (const auto &p:params)
+		std::cout << p << " ";
+	std::cout << std::endl;
 	if( params.size() != 4 )
 	{
 		std::cout << "Error. Araujo. It requires 4 parameters (M2,v,d,CentralMass)" << std::endl;
