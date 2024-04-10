@@ -510,7 +510,7 @@ void displayHelp(const char* programName) {
 	std::cout << "  --help: Display this help message" << std::endl;
 }
 
-void WriteOrbit( std::pair<Particle, std::vector<Body>> nBodySystem, std::string outfname, int steps )
+double GetCaptureTime( std::pair<Particle, std::vector<Body>> nBodySystem, std::string outfname, int steps )
 {
 	Particle particle = nBodySystem.first;
 	std::vector <Body> bodies = nBodySystem.second;
@@ -526,11 +526,16 @@ void WriteOrbit( std::pair<Particle, std::vector<Body>> nBodySystem, std::string
 	{
 		RK4 ( particle, bodies, deltaT );
 		/* if( debug ) { PrintNBodySystem( nBodySystem ); } */
-		WriteParticle( outputFile, t, particle, bodies );
+		//WriteParticle( outputFile, t, particle, bodies );
+		double en = p.BodyEnergy(bodies[1]);
+		if (en > 0){
+			return t;
+		}
 		t += deltaT;
 		cont++;
 	}
 	outputFile.close();
+	return 0;
 }
 
 double GetTransmisionTime (int steps){
@@ -639,8 +644,8 @@ int main(int argc, char* argv[]) {
 	for (double d = dini; d < dfin; d += 0.01){
 		std::vector<double> params = {M2, v, d, CentralMass};
 		std::pair<Particle, std::vector<Body>> nBodySystem = InitializeSystem(systemName, params );
-		WriteOrbit( nBodySystem, outputFilename, steps );
-		tcapture = GetTransmisionTime(steps);
+		tcapture = GetCaptureTime( nBodySystem, outputFilename, steps );
+		//tcapture = GetCaptureTime(steps);
 		if (archivo.is_open()) {
         		archivo << d << "\t" << tcapture << "\n";
     		} 
