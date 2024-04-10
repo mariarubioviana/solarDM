@@ -527,7 +527,7 @@ double GetCaptureTime( std::pair<Particle, std::vector<Body>> nBodySystem, std::
 		RK4 ( particle, bodies, deltaT );
 		/* if( debug ) { PrintNBodySystem( nBodySystem ); } */
 		//WriteParticle( outputFile, t, particle, bodies );
-		double en = p.BodyEnergy(bodies[1]);
+		double en = particle.BodyEnergy(bodies[1]);
 		if (en > 0){
 			return t;
 		}
