@@ -321,6 +321,7 @@ std::pair<Particle,std::vector<Body>> InitAraujo( std::vector<double> params ) {
 std::pair<Particle,std::vector<Body>> InitAraujoModified( std::vector<double> params ) {
 	Particle particle;
 	std::vector <Body> bodies;
+	std::cout << "InitAraujoModified: ";
 	for (const auto &p:params)
 		std::cout << p << " ";
 	std::cout << std::endl;
@@ -564,8 +565,8 @@ int main(int argc, char* argv[]) {
 	double M2 = 1.e-5;
 	double CentralMass = 100;
 	double v = 20;
-	double dini = 0.0001;
-	double dfin = 0.1;
+	double dini = 0.0000287;
+	double dfin = 0.01500;
 	double tcapture;
 
 	// Parse command-line arguments
@@ -643,9 +644,14 @@ int main(int argc, char* argv[]) {
 	//WriteOrbit( nBodySystem, outputFilename, steps );
 	std::ofstream archivo("tcapture.txt");
 
-	for (double d = dini; d < dfin; d += 0.01){
-		std::vector<double> params = {params[0], params[1], d, params[3]};
-		std::pair<Particle, std::vector<Body>> nBodySystem = InitializeSystem(systemName, params );
+	for (double d = dini; d < dfin; d += 0.00005){
+		std::cout << "loop: ";
+		for (const auto &p:params)
+			std::cout << p << " ";
+		std::cout << std::endl;
+		std::cout << "d: " << d << std::endl;
+
+		std::pair<Particle, std::vector<Body>> nBodySystem = InitializeSystem(systemName, {params[0], params[1], d, params[3]} );
 		tcapture = GetCaptureTime( nBodySystem, outputFilename, steps );
 		//tcapture = GetCaptureTime(steps);
 		if (archivo.is_open()) {
@@ -654,8 +660,8 @@ int main(int argc, char* argv[]) {
 		else {
        			std::cout << "No se pudo abrir el archivo." << std::endl;
     		}
-		times.clear();
-		bodyenergy.clear();
+		//times.clear();
+		//bodyenergy.clear();
 	}
 	archivo.close();
 }
