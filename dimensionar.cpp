@@ -13,7 +13,7 @@ double DT = 0.001; // differential step
 
 namespace physics
 {
-	 double G = 6.672.e-11;
+	 double G = 6.672e-11;
 	 double H0 = -0.5;
 	 double phi1 = 0;
 	 double e = 0.6;
