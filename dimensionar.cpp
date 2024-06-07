@@ -494,7 +494,7 @@ void RK4( Particle &particle,  std::vector <Body> &bodies, double h = 0.01){
 ///// Output method /////
 /////////////////////////
 void WriteParticle( std::ofstream &ofile, double t, const Particle &p, const std::vector <Body> bodies ) {
-	ofile << t << "\t" << p.position.X() << "\t" << p.RadialPosition() << "\t" << p.RadialVelocity();
+	ofile << t << "\t" << p.position.X() << "\t" << p.position.Y() << "\t" << p.RadialPosition() << "\t" << p.RadialVelocity();
 
   /*
 	for( const auto &b: bodies)
