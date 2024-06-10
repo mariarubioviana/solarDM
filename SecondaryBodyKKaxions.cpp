@@ -285,14 +285,30 @@ std::pair<Particle,std::vector<Body>> InitKKAxionsModified( std::vector<double> 
 		return {particle,bodies};
 	}
 
+	double M1 = 1.989e30; //mass of the Sun
 	double M2 = params[0];
 	double R2 = params[1];
 	double v = params[2];
 	double d = params[3];
+	double mu1 = M1/(M1+M2);
+	double mu2 = M2/(M1+M2);
 
 	Body b;
 
-  b.position.x = 0;
+  	b.position.x = -mu2;
+	b.position.y = 0;
+	b.position.z = 0;
+
+	/// Velocity at the synodic system
+	b.velocity.x = 0;
+	b.velocity.y = -mu2;
+	b.velocity.z = 0;
+	b.M = M1;
+	b.R = 6.957e8; // Size of the Sun
+
+	bodies.push_back( b );
+
+  	b.position.x = mu1;
 	b.position.y = 0;
 	b.position.z = 0;
 
@@ -300,28 +316,15 @@ std::pair<Particle,std::vector<Body>> InitKKAxionsModified( std::vector<double> 
 	b.velocity.x = 0;
 	b.velocity.y = 0;
 	b.velocity.z = 0;
-	b.M = 1.989e30;
-	b.R = 6.957e8; // Size of the Sun
-
-	bodies.push_back( b );
-
-  b.position.x = d;
-	b.position.y = 0;
-	b.position.z = 0;
-
-	/// Velocity at the synodic system
-	b.velocity.x = v;
-	b.velocity.y = 0;
-	b.velocity.z = 0;
 	b.M = M2;
 	b.R = R2; // Size of the SecondaryBody
 
 	// We assign the particle (inside the Sun)
-	particle.position.x = 2.783e8;
-	particle.position.y = -2.087e8;
+	particle.position.x = -mu2 + d;
+	particle.position.y = 0;
 	
-	particle.velocity.x = 6.176e5;
-	particle.velocity.y = 0.0;
+	particle.velocity.x = 0;
+	particle.velocity.y = v - mu2 + d;
 
 	return {particle,bodies};
 }
