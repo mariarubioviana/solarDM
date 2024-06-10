@@ -275,7 +275,7 @@ std::pair<Particle,std::vector<Body>> InitKKAxions() {
 	return {particle,bodies};
 }
 
-std::pair<Particle,std::vector<Body>> KKAxionsModified( std::vector<double> params ) {
+std::pair<Particle,std::vector<Body>> InitKKAxionsModified( std::vector<double> params ) {
 	Particle particle;
 	std::vector <Body> bodies;
 
