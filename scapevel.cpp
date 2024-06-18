@@ -10,7 +10,7 @@
 bool debug = false;
 bool info = true;
 double DT = 0.001; // differential step
-std::vector<double> initialvelocity;
+std::vector<double> times;
 std::vector<double> totalenergy;
 
 namespace physics
@@ -253,7 +253,7 @@ std::pair<Particle,std::vector<Body>> InitKKAxions ( std::vector<double> params 
 
 	double v = params[0];
 	double x = params[1];
-	double v = params[2];
+	double y = params[2];
 	
 	Body b;
 
@@ -502,13 +502,8 @@ void WriteParticle( std::ofstream &ofile, double t, const Particle &p, const std
 	ofile << t << "\t" <<  p.position.X() << "\t" << p.position.Y() << "\t" << p.position.Z() << "\t" << p.velocity.X() << "\t" << p.velocity.Y() << "\t" << p.velocity.Z();
 	times.push_back(t);
 	for( const auto &b: bodies)
-		ofile << "\t" << p.BodyEnergy(b);
+		ofile << "\t" << p.BodyEnergy(b); //NO SE COMO PONER AQUI LA ENERGÍA TOTAL
 	bodyenergy.push_back(p.BodyEnergy(bodies[1]));
-	
-	/*
-	for( const auto &b: bodies)
-		ofile << "\t" << p.DistanceToBodySquared( b);
-		*/
 
 	ofile << "\n";
 }
@@ -525,7 +520,7 @@ void displayHelp(const char* programName) {
 	std::cout << "  --help: Display this help message" << std::endl;
 }
 
-double GetCaptureTime( std::pair<Particle, std::vector<Body>> nBodySystem, std::string outfname, int steps )
+double GetEscapeVelocity( std::pair<Particle, std::vector<Body>> nBodySystem, std::string outfname, int steps )
 {
 	Particle particle = nBodySystem.first;
 	std::vector <Body> bodies = nBodySystem.second;
@@ -544,7 +539,7 @@ double GetCaptureTime( std::pair<Particle, std::vector<Body>> nBodySystem, std::
 		//WriteParticle( outputFile, t, particle, bodies );
 		double en = particle.BodyEnergy(bodies[1]);
 		if (en > 0){
-			return t;
+			return 1;
 		}
 		t += deltaT;
 		cont++;
@@ -561,12 +556,9 @@ int main(int argc, char* argv[]) {
 	// M2, v, d
 	std::vector<double> params = { 1.e-5, 20, 0.0001};
 	int steps = (int) (2./DT);
-	double M2 = 1.e-5;
-	double CentralMass = 100;
-	double v = 20;
-	double dini = 0.0000287;
-	double dfin = 0.01500;
-	double tcapture;
+	int data;
+	double vini = 0.2; //no sé que valores dar
+	double vfin = 3.8; //no sé que valores dar
 
 	// Parse command-line arguments
 	for (int i = 1; i < argc; ++i) {
@@ -641,26 +633,26 @@ int main(int argc, char* argv[]) {
 
 	//std::pair<Particle, std::vector<Body>> nBodySystem = InitializeSystem(systemName, params );
 	//WriteOrbit( nBodySystem, outputFilename, steps );
-	std::ofstream archivo("tcapture.txt");
+	std::ofstream archivo("escapevelocity.txt");
 
-	for (double d = dini; d < dfin; d += 0.00005){
+	for (double v = dini; v < dfin; v += 0.00005){ //no sé que salto poner
 		std::cout << "loop: ";
 		for (const auto &p:params)
 			std::cout << p << " ";
 		std::cout << std::endl;
-		std::cout << "d: " << d << std::endl;
+		std::cout << "v: " << v << std::endl;
 
-		std::pair<Particle, std::vector<Body>> nBodySystem = InitializeSystem(systemName, {params[0], params[1], d, params[3]} );
-		tcapture = GetCaptureTime( nBodySystem, outputFilename, steps );
-		//tcapture = GetCaptureTime(steps);
-		if (archivo.is_open()) {
-        		archivo << d << "\t" << tcapture << "\n";
-    		} 
-		else {
-       			std::cout << "No se pudo abrir el archivo." << std::endl;
-    		}
-		//times.clear();
-		//bodyenergy.clear();
+		std::pair<Particle, std::vector<Body>> nBodySystem = InitializeSystem(systemName, {v, params[1], params[2]} );
+		data = GetEscapeVelocity( nBodySystem, outputFilename, steps );
+		if (data == 1){
+			if (archivo.is_open()) {
+        			archivo << v << "\n";
+    			} 
+			else {
+       				std::cout << "No se pudo abrir el archivo." << std::endl;
+    			}
+			break; //cuando se encuentra la velocidad de escape salgo del bucle
+		}
 	}
 	archivo.close();
 }
