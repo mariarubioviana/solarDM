@@ -10,8 +10,8 @@
 bool debug = false;
 bool info = true;
 double DT = 0.001; // differential step
-std::vector<double> times;
-std::vector<double> bodyenergy;
+std::vector<double> initialvelocity;
+std::vector<double> totalenergy;
 
 namespace physics
 {
@@ -236,10 +236,25 @@ std::pair<Particle,std::vector<Body>> InitInes() {
 	return {particle,bodies};
 }
 
-std::pair<Particle,std::vector<Body>> InitKKAxions() {
+std::pair<Particle,std::vector<Body>> InitKKAxions ( std::vector<double> params ){
 	Particle particle;
 	std::vector <Body> bodies;
+	
+	std::cout << "InitKKAxions: ";
+	for (const auto &p:params)
+		std::cout << p << " ";
+	std::cout << std::endl;
 
+	if( params.size() != 3 )
+	{
+		std::cout << "Error. KKAxions. It requires 3 parameters (v,x,y)" << std::endl;
+		return {particle,bodies};
+	}
+
+	double v = params[0];
+	double x = params[1];
+	double v = params[2];
+	
 	Body b;
 
 	b.position.x = 0;
@@ -256,11 +271,11 @@ std::pair<Particle,std::vector<Body>> InitKKAxions() {
 	bodies.push_back( b );
 
 	// We assign the particle (inside the Sun)
-	particle.position.x = 0.4;
-	particle.position.y = -0.3;
+	particle.position.x = x; //0.4
+	particle.position.y = y; //-0.3
 	
-	particle.velocity.x = 1.2;
-	particle.velocity.y = 0.1;
+	particle.velocity.x = v; //1.2
+	particle.velocity.y = 0.0; //0.1
 
 	return {particle,bodies};
 }
@@ -321,10 +336,7 @@ std::pair<Particle,std::vector<Body>> InitAraujo( std::vector<double> params ) {
 std::pair<Particle,std::vector<Body>> InitAraujoModified( std::vector<double> params ) {
 	Particle particle;
 	std::vector <Body> bodies;
-	std::cout << "InitAraujoModified: ";
-	for (const auto &p:params)
-		std::cout << p << " ";
-	std::cout << std::endl;
+	
 	if( params.size() != 4 )
 	{
 		std::cout << "Error. Araujo. It requires 4 parameters (M2,v,d,CentralMass)" << std::endl;
@@ -389,7 +401,7 @@ std::pair<Particle,std::vector<Body>> InitializeSystem(std::string config, std::
 		system = InitInes();
 
 	if( config == "KKaxions" )
-		system = InitKKAxions();
+		system = InitKKAxions(params);
 
 	if( info )
 	{
@@ -538,19 +550,6 @@ double GetCaptureTime( std::pair<Particle, std::vector<Body>> nBodySystem, std::
 		cont++;
 	}
 	outputFile.close();
-	return 0;
-}
-
-double GetTransmisionTime (int steps){
-	std::ofstream archivo("tcapture.txt");
-	double tc;
-	int cont = 0;
-	while (cont < steps)
-	{	
-		cont ++;
-		if (bodyenergy[cont] >= 0)
-			return times[cont];
-	}
 	return 0;
 }
 
