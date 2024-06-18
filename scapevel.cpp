@@ -635,7 +635,7 @@ int main(int argc, char* argv[]) {
 	//WriteOrbit( nBodySystem, outputFilename, steps );
 	std::ofstream archivo("escapevelocity.txt");
 
-	for (double v = dini; v < dfin; v += 0.00005){ //no sé que salto poner
+	for (double v = vini; v < vfin; v += 0.00005){ //no sé que salto poner
 		std::cout << "loop: ";
 		for (const auto &p:params)
 			std::cout << p << " ";
