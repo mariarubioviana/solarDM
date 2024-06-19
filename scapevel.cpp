@@ -549,7 +549,7 @@ double GetEscapeVelocity( std::pair<Particle, std::vector<Body>> nBodySystem, st
 		RK4 ( particle, bodies, deltaT );
 		/* if( debug ) { PrintNBodySystem( nBodySystem ); } */
 		//WriteParticle( outputFile, t, particle, bodies );
-		while ( particle.RadialPosition() < 1){
+		while ( particle.RadialPosition() > 1){
 			double en = particle.TotalEnergy(bodies);
 			if (en > 0){
 				return 1;
