@@ -114,6 +114,18 @@ struct Particle{
 		return (velocity.X()*velocity.X() + velocity.Y()*velocity.Y() + velocity.Z()*velocity.Z());
 	}
 
+	 /// Returns the radial velocity of the particle
+	double RadialVelocity( ) const
+	{
+		return (sqrt(velocity.X()*velocity.X() + velocity.Y()*velocity.Y()));
+	}
+
+        /// Returns the radial position of the particle
+	double RadialPosition( ) const
+	{
+		return (sqrt(position.X()*position.X() + position.Y()*position.Y()));
+	}
+
 	/// Returns the distance squared between the particle and the origin
 	inline double DistanceToCenterSquared( )
 	{
@@ -537,9 +549,11 @@ double GetEscapeVelocity( std::pair<Particle, std::vector<Body>> nBodySystem, st
 		RK4 ( particle, bodies, deltaT );
 		/* if( debug ) { PrintNBodySystem( nBodySystem ); } */
 		//WriteParticle( outputFile, t, particle, bodies );
-		double en = particle.BodyEnergy(bodies[1]);
-		if (en > 0){
-			return 1;
+		while ( particle.RadialPosition() < 1){
+			double en = particle.TotalEnergy(bodies);
+			if (en > 0){
+				return 1;
+			}
 		}
 		t += deltaT;
 		cont++;
