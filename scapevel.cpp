@@ -510,15 +510,15 @@ void RK4( Particle &particle,  std::vector <Body> &bodies, double h = 0.01){
 
 ///// Output method /////
 /////////////////////////
-void WriteParticle( std::ofstream &ofile, double t, const Particle &p, const std::vector <Body> bodies ) {
-	ofile << t << "\t" <<  p.position.X() << "\t" << p.position.Y() << "\t" << p.position.Z() << "\t" << p.velocity.X() << "\t" << p.velocity.Y() << "\t" << p.velocity.Z();
-	times.push_back(t);
-	for( const auto &b: bodies)
-		ofile << "\t" << p.BodyEnergy(b); //NO SE COMO PONER AQUI LA ENERGÍA TOTAL
-	bodyenergy.push_back(p.BodyEnergy(bodies[1]));
+//void WriteParticle( std::ofstream &ofile, double t, const Particle &p, const std::vector <Body> bodies ) {
+	//ofile << t << "\t" <<  p.position.X() << "\t" << p.position.Y() << "\t" << p.position.Z() << "\t" << p.velocity.X() << "\t" << p.velocity.Y() << "\t" << p.velocity.Z();
+	//times.push_back(t);
+	//for( const auto &b: bodies)
+		//ofile << "\t" << p.BodyEnergy(b); //NO SE COMO PONER AQUI LA ENERGÍA TOTAL
+	//bodyenergy.push_back(p.BodyEnergy(bodies[1]));
 
-	ofile << "\n";
-}
+	//ofile << "\n";
+//}
 
 ///// Display help method /////
 ///////////////////////////////
