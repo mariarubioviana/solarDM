@@ -541,7 +541,7 @@ double GetEscapeVelocity( std::pair<Particle, std::vector<Body>> nBodySystem, st
 
 	double deltaT = DT;
 	double t = 0;
-	WriteParticle( outputFile, t, particle, bodies );
+	//WriteParticle( outputFile, t, particle, bodies );
 	
 	int cont = 0;
 	while ( cont < steps )
