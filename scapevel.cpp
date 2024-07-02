@@ -571,8 +571,8 @@ int main(int argc, char* argv[]) {
 	std::vector<double> params = { 1.e-5, 20, 0.0001};
 	int steps = (int) (2./DT);
 	int data;
-	double vini = 0.2; //no sé que valores dar
-	double vfin = 3.8; //no sé que valores dar
+	double vini = 0.8; //no sé que valores dar
+	double vfin = 1.8; //no sé que valores dar
 
 	// Parse command-line arguments
 	for (int i = 1; i < argc; ++i) {
@@ -649,7 +649,7 @@ int main(int argc, char* argv[]) {
 	//WriteOrbit( nBodySystem, outputFilename, steps );
 	std::ofstream archivo("escapevelocity.txt");
 
-	for (double v = vini; v < vfin; v += 0.00005){ //no sé que salto poner
+	for (double v = vini; v < vfin; v += 0.05){ //no sé que salto poner
 		std::cout << "loop: ";
 		for (const auto &p:params)
 			std::cout << p << " ";
