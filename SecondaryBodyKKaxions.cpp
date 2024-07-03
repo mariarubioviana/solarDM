@@ -270,7 +270,7 @@ std::pair<Particle,std::vector<Body>> InitKKAxions() {
 	particle.position.y = 0;
 	
 	particle.velocity.x = 0;
-	particle.velocity.y = 0.0; //velocidad de orbita cerrrada
+	particle.velocity.y = 1.2; //velocidad de orbita cerrrada
 
 	return {particle,bodies};
 }
