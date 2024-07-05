@@ -266,11 +266,11 @@ std::pair<Particle,std::vector<Body>> InitKKAxions() {
 	bodies.push_back( b );
 
 	// We assign the particle (inside the Sun)
-	particle.position.x = 0.1; 
-	particle.position.y = 0;
+	particle.position.x = 0.4; 
+	particle.position.y = -0.3;
 	
 	particle.velocity.x = 0;
-	particle.velocity.y = 1.2; //velocidad de orbita cerrrada
+	particle.velocity.y = 1.3; //velocidad de orbita cerrrada
 
 	return {particle,bodies};
 }
@@ -281,7 +281,7 @@ std::pair<Particle,std::vector<Body>> InitKKAxionsModified( std::vector<double> 
 
 	if( params.size() != 2 )
 	{
-		std::cout << "Error. KKaxionsModified. It requires 4 parameters (M2,d)" << std::endl;
+		std::cout << "Error. KKaxionsModified. It requires 2 parameters (M2,d)" << std::endl;
 		return {particle,bodies};
 	}
 
@@ -316,11 +316,11 @@ std::pair<Particle,std::vector<Body>> InitKKAxionsModified( std::vector<double> 
 	b.R = 0; // Size of the SecondaryBody
 
 	// We assign the particle (inside the Sun)
-	particle.position.x = 0.1;
-	particle.position.y = 0;
+	particle.position.x = 0.4;
+	particle.position.y = -0.3;
 	
 	particle.velocity.x = 0;
-	particle.velocity.y = 1.2; //velocidad de orbita cerrada
+	particle.velocity.y = 1.3; //velocidad de orbita cerrada
 
 	return {particle,bodies};
 }
