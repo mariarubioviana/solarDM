@@ -572,7 +572,7 @@ int main(int argc, char* argv[]) {
 	int steps = (int) (2./DT);
 	double data;
 	double vini = 0.8; //no sé que valores dar
-	double vfin = 1.8; //no sé que valores dar
+	double vfin = 2.1; //no sé que valores dar
 
 	// Parse command-line arguments
 	for (int i = 1; i < argc; ++i) {
