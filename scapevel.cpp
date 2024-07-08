@@ -655,7 +655,7 @@ int main(int argc, char* argv[]) {
 			std::cout << p << " ";
 		std::cout << std::endl;
 		std::cout << "v: " << v << std::endl;
-		std::cout << "hola " << std::endl;
+		cout << "hola" << "\n";
 
 		std::pair<Particle, std::vector<Body>> nBodySystem = InitializeSystem(systemName, {v, params[1], params[2]} );
 		data = GetEscapeVelocity( nBodySystem, outputFilename, steps );
