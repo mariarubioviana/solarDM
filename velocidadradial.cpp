@@ -269,12 +269,12 @@ std::pair<Particle,std::vector<Body>> InitKKAxions() {
 	//particle.position.x = 0.4;
 	//particle.position.y = -0.3;
 	particle.position.x = -0.1;
-	particle.position.y = 0.9;
+	particle.position.y = 0.2;
 	
 	//particle.velocity.x = 1.2;
 	//particle.velocity.y = 0.1;
-	particle.velocity.x = 0.8;
-	particle.velocity.y = 1.0;
+	particle.velocity.x = 1.0;
+	particle.velocity.y = 1.3;
 
 	return {particle,bodies};
 }
