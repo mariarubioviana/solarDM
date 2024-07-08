@@ -570,7 +570,7 @@ int main(int argc, char* argv[]) {
 	// M2, v, d
 	std::vector<double> params = { 1.e-5, 20, 0.0001};
 	int steps = (int) (2./DT);
-	int data;
+	double data;
 	double vini = 0.8; //no sé que valores dar
 	double vfin = 1.8; //no sé que valores dar
 
