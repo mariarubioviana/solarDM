@@ -667,6 +667,7 @@ int main(int argc, char* argv[]) {
     			}
 			break; //cuando se encuentra la velocidad de escape salgo del bucle
 		}
+		std::cout << "hola " << std::endl;
 	}
 	archivo.close();
 }
