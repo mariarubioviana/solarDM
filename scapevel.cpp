@@ -657,6 +657,7 @@ int main(int argc, char* argv[]) {
 		std::cout << "v: " << v << std::endl;
 
 		std::pair<Particle, std::vector<Body>> nBodySystem = InitializeSystem(systemName, {v, params[1], params[2]} );
+		std::cout << "hola " << std::endl;
 		data = GetEscapeVelocity( nBodySystem, outputFilename, steps );
 		if (data == 1){
 			if (archivo.is_open()) {
@@ -667,7 +668,6 @@ int main(int argc, char* argv[]) {
     			}
 			break; //cuando se encuentra la velocidad de escape salgo del bucle
 		}
-		std::cout << "hola " << std::endl;
 	}
 	archivo.close();
 }
