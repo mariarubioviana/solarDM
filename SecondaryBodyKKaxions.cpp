@@ -303,7 +303,6 @@ std::pair<Particle,std::vector<Body>> InitKKAxionsModified( std::vector<double> 
 	b.R = 1; // Size of the Sun
 
 	bodies.push_back( b );
-	std::cout << "body 1" << std::endl;
 
   	b.position.x = d;
 	b.position.y = 0;
