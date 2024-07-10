@@ -143,7 +143,7 @@ struct Particle{
 	double PotentialEnergy( const Body &body) const {
 		double r = sqrt(DistanceToBodySquared( body));
 		if (r == 0){
-			return 0;
+			return 0.0;
 		}
 		return -physics::G * body.Mass(r*r*r) / r;
 	}
