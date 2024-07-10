@@ -266,11 +266,11 @@ std::pair<Particle,std::vector<Body>> InitKKAxions() {
 	bodies.push_back( b );
 
 	// We assign the particle (inside the Sun)
-	particle.position.x = -0.1;
-	particle.position.y = 0.2;
+	particle.position.x = 0.4;
+	particle.position.y = 0.1;
 	
-	particle.velocity.x = 1.0;
-	particle.velocity.y = 1.3;
+	particle.velocity.x = 1.2;
+	particle.velocity.y = 1.1;
 
 	return {particle,bodies};
 }
