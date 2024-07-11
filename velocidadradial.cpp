@@ -213,6 +213,7 @@ Vector3D KeplerForce( Particle p,  std::vector <Body> bodies ) {
 			force.x = 0.0;
 			force.y = 0.0;
 			force.z = 0.0;
+			return force;
 		}
 		force.x -= physics::G * b.Mass(r3) * ( p.position.X() - b.position.X() )/r3;
 		force.y -= physics::G * b.Mass(r3) * ( p.position.Y() - b.position.Y() )/r3;
