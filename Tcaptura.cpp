@@ -568,7 +568,7 @@ int main(int argc, char* argv[]) {
 	//double dini = 0.0000287;
 	//double dfin = 0.01500;
 	double dini = 0.0;
-	double dfin = 0.01700;
+	double dfin = 0.01500;
 	
 	double tcapture;
 
