@@ -565,8 +565,11 @@ int main(int argc, char* argv[]) {
 	double M2 = 1.e-5;
 	double CentralMass = 100;
 	double v = 20;
-	double dini = 0.0000287;
-	double dfin = 0.01500;
+	//double dini = 0.0000287;
+	//double dfin = 0.01500;
+	double dini = 0.0;
+	double dfin = 0.01700;
+	
 	double tcapture;
 
 	// Parse command-line arguments
